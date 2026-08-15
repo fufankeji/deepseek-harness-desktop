@@ -1,0 +1,106 @@
+name: Windows Installer Upgrade Diagnostic
+
+on:
+  push:
+    branches:
+      - diag/windows-installer-upgrade
+
+permissions:
+  contents: read
+
+jobs:
+  verify-running-app-upgrade:
+    name: Upgrade while the installed app is running
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Download and exercise the published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = 'desktop-preview-v0.1.0-rc.5'
+          $download = Join-Path $env:RUNNER_TEMP 'published-installer'
+          New-Item -ItemType Directory -Path $download -Force | Out-Null
+          gh release download $tag `
+            --repo $env:GITHUB_REPOSITORY `
+            --pattern '*Setup.exe' `
+            --dir $download
+          if ($LASTEXITCODE -ne 0) { throw "Release download exited with $LASTEXITCODE." }
+
+          $installers = @(Get-ChildItem $download -File -Filter '*Setup.exe')
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one installer; found $($installers.Count)."
+          }
+          $installer = $installers[0]
+          $digest = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "installer_sha256=$digest"
+
+          function Invoke-Installer([string] $label) {
+            $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -PassThru
+            if (-not $process.WaitForExit(120000)) {
+              taskkill /PID $process.Id /T /F | Out-Host
+              throw "$label installer did not exit within 120 seconds."
+            }
+            $process.WaitForExit()
+            Write-Host "$label installer_exit=$($process.ExitCode)"
+            if ($process.ExitCode -ne 0) {
+              Get-CimInstance Win32_Process |
+                Where-Object { $_.Name -like 'DeepSeek Harness*' -or $_.ExecutablePath -like '*DeepSeek Harness*' } |
+                Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |
+                Format-List | Out-Host
+              throw "$label installer exited with $($process.ExitCode)."
+            }
+          }
+
+          Invoke-Installer 'initial'
+          $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
+            -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
+          if ($applications.Count -ne 1) {
+            throw "Expected exactly one installed application; found $($applications.Count)."
+          }
+          $application = $applications[0]
+          $testRoot = Join-Path $env:RUNNER_TEMP 'dsh-running-upgrade'
+          $userData = Join-Path $testRoot 'user-data'
+          $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
+          New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+          $running = Start-Process -FilePath $application.FullName `
+            -ArgumentList "--user-data-dir=$userData" `
+            -PassThru
+
+          Start-Sleep -Seconds 15
+          $running.Refresh()
+          if ($running.HasExited) {
+            throw "Installed application exited before the upgrade test with $($running.ExitCode)."
+          }
+          Write-Host "running_application_pid=$($running.Id)"
+
+          Invoke-Installer 'running-upgrade'
+          $running.Refresh()
+          if (-not $running.HasExited) {
+            taskkill /PID $running.Id /T /F | Out-Host
+            throw 'The original application process remained after the upgrade.'
+          }
+          if (-not (Test-Path -LiteralPath $application.FullName -PathType Leaf)) {
+            throw 'The installed application is missing after the upgrade.'
+          }
+
+          $afterUpgrade = Start-Process -FilePath $application.FullName `
+            -ArgumentList "--user-data-dir=$userData" `
+            -PassThru
+          Start-Sleep -Seconds 15
+          $afterUpgrade.Refresh()
+          if ($afterUpgrade.HasExited) {
+            throw "Upgraded application exited with $($afterUpgrade.ExitCode)."
+          }
+          Write-Host 'running_app_upgrade=PASS'
+          taskkill /PID $afterUpgrade.Id /T /F | Out-Host
+
+          $uninstallers = @(Get-ChildItem $application.DirectoryName -File -Filter 'Uninstall*.exe')
+          if ($uninstallers.Count -ne 1) {
+            throw "Expected exactly one uninstaller; found $($uninstallers.Count)."
+          }
+          $uninstall = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstall exited with $($uninstall.ExitCode)." }
