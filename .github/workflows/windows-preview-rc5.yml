@@ -59,8 +59,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $archive = Join-Path $env:RUNNER_TEMP "accepted-preview\$env:MACOS_PREVIEW_ASSET"
           $expanded = Join-Path $env:RUNNER_TEMP 'accepted-preview-expanded'
-          7z x $archive "-o$expanded" -y | Out-Host
-          if ($LASTEXITCODE -ne 0) { throw "7z exited with $LASTEXITCODE" }
+          7z x $archive 'DeepSeek Harness.app/Contents/Resources/*' "-o$expanded" -y | Out-Host
+          if ($LASTEXITCODE -gt 1) { throw "7z exited with $LASTEXITCODE" }
 
           $resources = Join-Path $expanded 'DeepSeek Harness.app\Contents\Resources'
           $appAsar = Join-Path $resources 'app.asar'
