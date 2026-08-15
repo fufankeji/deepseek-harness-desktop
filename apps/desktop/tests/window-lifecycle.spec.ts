@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createDesktopLifecycle,
+  INSTALLER_QUIT_ARGUMENT,
+  isInstallerQuitRequest,
   type DesktopWindow,
 } from '../src/window-lifecycle.ts'
 
@@ -39,6 +41,12 @@ function fakeWindow(options: { destroyed?: boolean; visible?: boolean } = {}): F
 const loadHost = (): Promise<void> => Promise.resolve()
 
 describe('desktop window lifecycle', () => {
+  it('recognizes only the exact private installer quit argument', () => {
+    expect(isInstallerQuitRequest(['DeepSeek Harness.exe', INSTALLER_QUIT_ARGUMENT])).toBe(true)
+    expect(isInstallerQuitRequest(['DeepSeek Harness.exe', `${INSTALLER_QUIT_ARGUMENT}=true`])).toBe(false)
+    expect(isInstallerQuitRequest(['DeepSeek Harness.exe'])).toBe(false)
+  })
+
   it('hides an ordinary close without disposing the Host', () => {
     const window = fakeWindow()
     const preventDefault = vi.fn()

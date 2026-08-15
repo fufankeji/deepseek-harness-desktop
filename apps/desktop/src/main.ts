@@ -67,7 +67,11 @@ import {
 import { createTrustedInstallRunner } from './plugin-center/trusted-install-executor.ts'
 import { createTrustedManagementRunner } from './plugin-center/trusted-management-executor.ts'
 import { DesktopUpdateController } from './update-controller.ts'
-import { createDesktopLifecycle, type DesktopLifecycle } from './window-lifecycle.ts'
+import {
+  createDesktopLifecycle,
+  isInstallerQuitRequest,
+  type DesktopLifecycle,
+} from './window-lifecycle.ts'
 
 const APP_NAME = 'DeepSeek Harness'
 const WINDOW_WIDTH = 1440
@@ -672,8 +676,16 @@ async function boot(): Promise<void> {
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
+} else if (isInstallerQuitRequest(process.argv)) {
+  app.quit()
 } else {
-  app.on('second-instance', () => { void lifecycle?.showWindow() })
+  app.on('second-instance', (_event, commandLine) => {
+    if (isInstallerQuitRequest(commandLine)) {
+      void requestAppQuit()
+      return
+    }
+    void lifecycle?.showWindow()
+  })
   app.on('activate', () => { void lifecycle?.showWindow() })
   app.on('window-all-closed', () => {
     // Tray and Host own application lifetime on every platform.

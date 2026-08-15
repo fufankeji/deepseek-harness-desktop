@@ -106,6 +106,8 @@ pnpm run dist:win:desktop
 
 该命令会构建完整工作区、暂存面向 Windows 的 Host 运行时，核验 Koffi、Sharp 和 node-pty 所需的 x64 原生模块，再生成 `.exe` 安装包、blockmap 与更新元数据。macOS 交叉构建会把 Electron Builder 的 NSIS 模板映射到一个较短的临时路径，因为 NSIS 在 POSIX include 路径上仍使用固定的 260 字符缓冲区；构建结束后会删除该临时符号链接。
 
+替换现有安装前，NSIS 安装程序会请求正在运行的单实例进入普通显式退出路径，并等待受 supervisor 管理的 Host 完全停稳。随后它会在 Electron Builder 检查文件替换条件前终止任何残留的 `DeepSeek Harness.exe` 进程树，因此常驻托盘或较旧的应用无法继续锁定安装目录。
+
 在配置 Windows Authenticode 证书前，内部测试安装包保持未签名。测试者核对已发布的 SHA-256 后，SmartScreen 可能仍要求选择“更多信息”→“仍要运行”。不需要关闭 Defender。实际启动与卸载验收仍必须在 Windows 10/11 x64 上完成。
 
 ## 已知限制

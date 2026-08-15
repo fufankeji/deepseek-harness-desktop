@@ -23,6 +23,7 @@ interface DesktopPackage {
     readonly nsis: {
       readonly oneClick: boolean
       readonly perMachine: boolean
+      readonly include: string
       readonly createDesktopShortcut: string
       readonly createStartMenuShortcut: boolean
       readonly shortcutName: string
@@ -43,6 +44,7 @@ const repositoryRoot = resolve(desktopRoot, '../..')
 const workspaceConfiguration = readFileSync(resolve(repositoryRoot, 'pnpm-workspace.yaml'), 'utf8')
 const builderPatch = readFileSync(resolve(repositoryRoot, 'patches/app-builder-lib@26.15.3.patch'), 'utf8')
 const macReleaseScript = readFileSync(resolve(desktopRoot, 'scripts/release-mac.ts'), 'utf8')
+const windowsInstallerInclude = readFileSync(resolve(desktopRoot, 'build/installer.nsh'), 'utf8')
 const desktopPackage = JSON.parse(
   readFileSync(resolve(desktopRoot, 'package.json'), 'utf8'),
 ) as DesktopPackage
@@ -139,10 +141,15 @@ describe('desktop packaging configuration', () => {
     expect(desktopPackage.build.nsis).toMatchObject({
       oneClick: true,
       perMachine: false,
+      include: 'build/installer.nsh',
       createDesktopShortcut: 'always',
       createStartMenuShortcut: true,
       shortcutName: 'DeepSeek Harness',
     })
+    expect(windowsInstallerInclude).toContain('--dsh-installer-quit')
+    expect(windowsInstallerInclude).toContain('taskkill.exe')
+    expect(windowsInstallerInclude).toContain('/T /F /IM "${APP_EXECUTABLE_FILENAME}"')
+    expect(windowsInstallerInclude).toContain('Sleep 7000')
   })
 
   it('exposes generic, macOS, and Windows release commands at the repository root', () => {

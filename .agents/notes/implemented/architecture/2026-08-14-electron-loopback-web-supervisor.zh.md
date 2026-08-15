@@ -22,13 +22,13 @@ Status: implemented
 
 macOS 和 Windows 使用同一个受跟踪的 `apps/desktop/build/icon.png` 输入，仓库不转换该文件。本地 `package:desktop` 生成未封装产物，不要求发布凭据。独立的 `dist:mac:desktop` 入口启用 hardened runtime，强制签名，并在创建 DMG 前要求一组完整的 Electron Builder 公证凭据。签名既可使用包含 `Developer ID Application` 证书及私钥的持久 Keychain 身份，也可使用由 Electron Builder 导入临时 Keychain 的 Base64 PKCS#12 凭据。发布 wrapper 不会把签名与公证变量传给仓库构建和运行时暂存，只会将其传给 Electron Builder。预检查会在仓库构建前拒绝非 macOS 宿主、已禁用的身份发现、非 Developer ID 身份，以及缺失或不完整的凭据。公证凭据可来自 `notarytool` Keychain profile、完整的 Apple ID 凭据组或 App Store Connect API 密钥凭据组。
 
-根目录的 `dist:win:desktop` 入口会构建当前用户安装、双击即用的 Windows x64 NSIS 安装包。运行时暂存会显式面向 `win32-x64`，打包前门禁除了普通 Host 与 Web 入口，还必须看见 Windows Koffi、Sharp、node-addon loader 与 node-pty 二进制。Electron Builder 会解析目标平台的 Electron 发行版，不会复用构建宿主已安装的 Electron。macOS 上的发布 wrapper 会通过短临时符号链接暴露 app-builder-lib 的 NSIS 模板，因为 NSIS 的 POSIX `__FILEDIR__` 实现仍使用固定的 260 字符缓冲区；Builder 结束后删除该链接。在配置 Authenticode 证书前，Windows 内部测试包保持未签名。
+根目录的 `dist:win:desktop` 入口会构建当前用户安装、双击即用的 Windows x64 NSIS 安装包。运行时暂存会显式面向 `win32-x64`，打包前门禁除了普通 Host 与 Web 入口，还必须看见 Windows Koffi、Sharp、node-addon loader 与 node-pty 二进制。Electron Builder 会解析目标平台的 Electron 发行版，不会复用构建宿主已安装的 Electron。macOS 上的发布 wrapper 会通过短临时符号链接暴露 app-builder-lib 的 NSIS 模板，因为 NSIS 的 POSIX `__FILEDIR__` 实现仍使用固定的 260 字符缓冲区；Builder 结束后删除该链接。替换已安装应用前，NSIS 会带私有参数 `--dsh-installer-quit` 启动已安装的可执行文件，并为 Host 有序 dispose 留出七秒；如果较旧实例不识别该参数，或者仍有卡住的后代进程，安装程序会按确定的可执行文件名终止完整进程树，然后 Electron Builder 才执行普通的文件占用检查。在配置 Authenticode 证书前，Windows 内部测试包保持未签名。
 
 `.github/workflows/desktop-release.yml` 是 GitHub 安装包发布入口。它只接受与 `apps/desktop/package.json` 完全匹配的不可变 `desktop-v<version>` 标签，然后在原生托管运行器上分别构建经过签名和公证的 macOS arm64 DMG 与更新 ZIP，以及带 Authenticode 签名的 Windows x64 NSIS 安装包。每个平台先验证自身签名，再上传短期工作流工件。最终作业必须同时取得两个平台的结果，生成 `SHA256SUMS`，用全部资产创建草稿 GitHub Release，并且只在完整上传成功后公开。仓库 README 会在首个安装包产生前链接 Releases 页面，但不会把源码压缩包或未封装应用描述为可下载安装包。
 
 该子进程仍然独家拥有 Web profile 的 Cordis 树、会话、设置、凭据、文件系统和 shell 服务、HTTP/WebSocket 载体，以及等待完全停稳的 dispose。Electron 不会把这些服务导入 main 进程或渲染器进程。BrowserWindow 加载经过校验的 loopback URL，禁用 Node 集成，启用上下文隔离和渲染器沙箱，并且不提供 preload 能力。这仍然是既有的本地 Web 安全模型：桌面壳不会增加身份验证层或 IPC 授权层。
 
-托盘和 Host supervisor 拥有独立于 BrowserWindow 可见性的应用生命周期。用户关闭窗口时，应用拦截该操作并隐藏窗口，既不退出 Electron，也不向子进程发送信号。激活托盘或在 macOS 上激活应用时，应用重新显示现有窗口。`window-all-closed` 不是退出请求。单实例锁阻止第二个桌面进程和第二个 Host 子进程启动；再次启动只会恢复主实例窗口并将其聚焦。
+托盘和 Host supervisor 拥有独立于 BrowserWindow 可见性的应用生命周期。用户关闭窗口时，应用拦截该操作并隐藏窗口，既不退出 Electron，也不向子进程发送信号。激活托盘或在 macOS 上激活应用时，应用重新显示现有窗口。`window-all-closed` 不是退出请求。单实例锁阻止第二个桌面进程和第二个 Host 子进程启动。普通的再次启动会恢复主实例窗口并将其聚焦；只有确定的私有 Windows 安装程序参数会改为进入与托盘相同的显式退出操作。
 
 所有显式退出路径汇入同一个幂等退出操作。该操作停止接受窗口恢复请求，向子进程发送 `SIGTERM`，并等待子进程退出。普通 `dsh` 启动器收到该信号后 dispose 根 Cordis fiber，其拥有的持久化和子进程服务在进程退出前完成排空。超出有界时限时，supervisor 只会一次性升级为向无响应子进程发送 `SIGKILL`，并且仍会等到子进程结算后才退出 Electron。重复退出请求会加入同一项操作，不会启动另一套信号或定时器序列。
 
@@ -46,7 +46,7 @@ Electron 会在经过校验的 Host URL 上附加一个白名单内的平台值�
 
 ## 验证
 
-`apps/desktop/tests/host-supervisor.spec.ts` 固定就绪解析在任意 stdout 分片和末行无换行时的行为，拒绝无效 scheme、host、port 和缺失的就绪信息，并覆盖单个在途启动、启动失败、提前退出、幂等关闭、协作式 `SIGTERM` 结算，以及只执行一次的超时升级。`apps/desktop/tests/window-lifecycle.spec.ts` 固定关闭窗口即隐藏、窗口创建合流、退出期间拒绝恢复窗口，以及 Electron 重试退出前只 dispose 一次 Host。客户端测试固定白名单内的挂载前桌面标记、macOS 90px 收起几何、Web／Windows／Linux 56px 几何、保持不变的 60px logo 行、平台专属侧栏偏移和拖拽条、不透明工作列、Windows 窗口按钮行留位、常驻中心拖拽区、标题栏交互排除、模态框存续期间暂停拖拽、原生玻璃渐变抑制、键盘焦点可见性和浏览器回退。源代码检查与评审固定 Electron 事件接线、单实例恢复、精确 origin 导航策略、加固后的 BrowserWindow 设置、Windows 标准边框和平台材质选择。打包测试固定共用源图标、完整构建与目标平台运行时暂存命令、打包后的 Host 路径、Electron Node 模式环境、封闭暂存声明、Windows 原生模块门禁、加固的 macOS 配置、快速失败的发布预检查、发布架构参数限制、原生签名检查、公开发布前的全平台依赖、校验和生成，以及在签名前拒绝缺失 Host 入口的产物。2026-08-14，arm64 发布路径生成了经过 Developer ID 签名、启用 hardened runtime、完成公证并装订票据的 DMG；挂载后的应用通过严格代码签名验证与 Gatekeeper 评估，其内置 Host 在干净退出前成功报告回环就绪并提供 HTTP 200 响应。同日的 Windows 路径生成了 180,201,653 字节 NSIS 安装包，应用主程序与所需原生模块均为 PE32+ x86-64；产物按声明未带 Authenticode，实际启动仍留给 Windows 10/11 x64 验收。
+`apps/desktop/tests/host-supervisor.spec.ts` 固定就绪解析在任意 stdout 分片和末行无换行时的行为，拒绝无效 scheme、host、port 和缺失的就绪信息，并覆盖单个在途启动、启动失败、提前退出、幂等关闭、协作式 `SIGTERM` 结算，以及只执行一次的超时升级。`apps/desktop/tests/window-lifecycle.spec.ts` 固定关闭窗口即隐藏、确定安装程序退出参数识别、窗口创建合流、退出期间拒绝恢复窗口，以及 Electron 重试退出前只 dispose 一次 Host。客户端测试固定白名单内的挂载前桌面标记、macOS 90px 收起几何、Web／Windows／Linux 56px 几何、保持不变的 60px logo 行、平台专属侧栏偏移和拖拽条、不透明工作列、Windows 窗口按钮行留位、常驻中心拖拽区、标题栏交互排除、模态框存续期间暂停拖拽、原生玻璃渐变抑制、键盘焦点可见性和浏览器回退。源代码检查与评审固定 Electron 事件接线、普通单实例恢复、安装程序拥有的退出路由、精确 origin 导航策略、加固后的 BrowserWindow 设置、Windows 标准边框和平台材质选择。打包测试固定共用源图标、完整构建与目标平台运行时暂存命令、打包后的 Host 路径、Electron Node 模式环境、封闭暂存声明、Windows 原生模块门禁、NSIS 先优雅退出再终止进程树的 include、加固的 macOS 配置、快速失败的发布预检查、发布架构参数限制、原生签名检查、公开发布前的全平台依赖、校验和生成，以及在签名前拒绝缺失 Host 入口的产物。2026-08-14，arm64 发布路径生成了经过 Developer ID 签名、启用 hardened runtime、完成公证并装订票据的 DMG；挂载后的应用通过严格代码签名验证与 Gatekeeper 评估，其内置 Host 在干净退出前成功报告回环就绪并提供 HTTP 200 响应。同日的 Windows 路径生成了 180,201,653 字节 NSIS 安装包，应用主程序与所需原生模块均为 PE32+ x86-64；产物按声明未带 Authenticode。原生 Windows 验收还会安装此前公开的包，启动其中已打包的 Host，在托盘应用仍活动时替换它，再启动替换后的应用并完成卸载。
 
 ## 考虑过的替代方案
 
@@ -62,6 +62,8 @@ Electron 会在经过校验的 Host URL 上附加一个白名单内的平台值�
 
 **显式退出时立即杀死子进程。** 立即终止可以缩短关闭时间，却会跳过会话刷盘和受管进程树清理。`SIGTERM` 把 dispose 交给子进程处理；强制终止只保留为有界失败路径。
 
+**Windows 替换时只依赖 Electron Builder 的通用运行中进程检查。** 该检查无法请求托盘应用排空其 Host，并且已经无法为下载后的安装包释放安装目录。安装程序会先调用应用拥有的退出路径，同时在通用检查前保留确定的进程树终止逻辑，以处理旧版本或无响应版本。
+
 **保留原生标题栏和不透明侧栏。** 这种方案无需载体专属样式，但会让桌面应用保留类似浏览器的窗口外观，也无法使用原生窗口已经拥有的平台材质。桌面标记把所需的布局调整限制在 Electron 中。
 
 **让整个工作区都半透明。** 如果让原生材质延伸到对话和详情内容背后，文字对比度会降低，主题表面也会依赖窗口下方的桌面内容。只有导航侧栏透出材质，工作内容保持不透明。
@@ -74,6 +76,6 @@ Electron 会在经过校验的 Host URL 上附加一个白名单内的平台值�
 
 第一阶段需要承担 loopback listener、额外 Node 进程、就绪行耦合和隐藏渲染器的资源成本。它继承 Web 载体的信任与暴露规则，而不会获得 Electron IPC 安全边界。自定义窗口外观还让客户端负责平台专属标题栏避让、可用的拖拽目标和 no-drag 交互区；Linux 保持无边框且没有原生玻璃材质，Windows 则依赖 Window Controls Overlay 几何。可分发包携带 CLI 生产依赖闭包和 Web 前端，Electron 的 Node 模式可以避免重复的 Node 二进制文件，代价是原生依赖兼容性与 Electron 交付的 ABI 耦合。运行时暂存还依赖 legacy `pnpm deploy` 行为，因此必须在 Builder 消费该目录树前补回遗漏的直接依赖并移除链接。正式 macOS 发布需要外部 Developer ID 身份、公证凭据和 Apple 公证服务；正式 Windows 发布仍需 Authenticode 身份，Linux 安装包格式与签名仍属于独立发布工作。只有子进程报告 Loader 结算后的 URL，桌面启动才算成功。Host 崩溃会让桌面壳退出，而不会恢复当前窗口；自动重启仍属于后续生命周期决策。
 
-GitHub 发布还需要 `desktop-release` 环境、macOS 与 Windows 签名秘密，以及确定版本标签。这会把公开下载推迟到两个平台身份均配置完成以后，但任一平台构建失败都不会给用户留下不完整或与源码不匹配的 Release。
+GitHub 发布还需要 `desktop-release` 环境、macOS 与 Windows 签名秘密，以及确定版本标签。这会把公开下载推迟到两个平台身份均配置完成以后，但任一平台构建失败都不会给用户留下不完整或与源码不匹配的 Release。检测到已安装进程时，Windows 替换操作可能在解压前增加最多八秒；这个上限换来 Host 的有序 dispose，同时为不理解私有退出请求的已分发版本保留强制清理。
 
 子进程安排是一项实现选择，不是公开协议。后续采用 IPC 的桌面应用仍使用 ApiProxy 四象限约定，并保留关闭即隐藏、托盘所有权、单实例行为和有序 Host dispose，同时替换 loopback 服务器、就绪行和被监督的 CLI 进程。

@@ -106,6 +106,8 @@ pnpm run dist:win:desktop
 
 The command builds the complete workspace, stages a Windows-targeted Host runtime, verifies the required Koffi, Sharp, and node-pty x64 native modules, then creates the `.exe` installer, blockmap, and update metadata. macOS cross-builds expose Electron Builder's NSIS templates through a short temporary path because NSIS still uses a fixed 260-character POSIX include buffer; the temporary symlink is removed after the build.
 
+Before replacing an existing installation, the NSIS installer asks the running single instance to enter the ordinary explicit-quit path and waits for the supervised Host to settle. It then terminates any remaining `DeepSeek Harness.exe` process tree before Electron Builder's file-replacement check, so a tray-resident or older application cannot keep the installation directory locked.
+
 Internal test installers remain unsigned until a Windows Authenticode certificate is configured. SmartScreen may therefore require **More info → Run anyway** after the tester verifies the published SHA-256. Do not disable Defender. Actual launch and uninstall acceptance must still run on Windows 10/11 x64.
 
 ## Known limitations

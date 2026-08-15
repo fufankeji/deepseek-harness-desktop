@@ -1,5 +1,17 @@
 /** Desktop window and application lifetime independent from Electron imports. */
 
+/** Private command-line signal used by the Windows installer before replacing application files. */
+export const INSTALLER_QUIT_ARGUMENT = '--dsh-installer-quit'
+
+/**
+ * Identify an installer-owned request without treating partial argument matches as authority to quit.
+ * @param commandLine - Arguments supplied to the first or a subsequent Electron instance.
+ * @returns Whether the exact private installer argument is present.
+ */
+export function isInstallerQuitRequest(commandLine: readonly string[]): boolean {
+  return commandLine.includes(INSTALLER_QUIT_ARGUMENT)
+}
+
 /** Minimal close event accepted by the desktop lifecycle. */
 export interface WindowCloseEvent {
   /** Keep the application alive while the window is hidden. */
