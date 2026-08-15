@@ -152,6 +152,15 @@ describe('desktop packaging configuration', () => {
     expect(windowsInstallerInclude).toContain('/T /F /IM "${APP_EXECUTABLE_FILENAME}"')
     expect(windowsInstallerInclude).toContain('Pop $0')
     expect(windowsInstallerInclude).toContain('Sleep 7000')
+    expect(windowsInstallerInclude).toContain('$1 == "0.1.0-rc.5"')
+    expect(windowsInstallerInclude).toContain(
+      'DeleteRegValue SHELL_CONTEXT "${UNINSTALL_REGISTRY_KEY}" "UninstallString"',
+    )
+    expect(windowsInstallerInclude).toContain(
+      'DeleteRegValue SHELL_CONTEXT "${UNINSTALL_REGISTRY_KEY}" "QuietUninstallString"',
+    )
+    expect(windowsInstallerInclude).toContain('SetOverwrite on')
+    expect(windowsInstallerInclude).not.toContain('DeleteRegKey SHELL_CONTEXT')
   })
 
   it('exposes generic, macOS, and Windows release commands at the repository root', () => {
