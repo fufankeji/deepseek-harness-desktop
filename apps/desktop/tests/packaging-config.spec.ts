@@ -149,6 +149,7 @@ describe('desktop packaging configuration', () => {
     expect(windowsInstallerInclude).toContain('--dsh-installer-quit')
     expect(windowsInstallerInclude).toContain('taskkill.exe')
     expect(windowsInstallerInclude).toContain('/T /F /IM "${APP_EXECUTABLE_FILENAME}"')
+    expect(windowsInstallerInclude).toContain('Pop $0')
     expect(windowsInstallerInclude).toContain('Sleep 7000')
   })
 
