@@ -9,3 +9,9 @@
     Sleep 1000
   ${EndIf}
 !macroend
+
+!macro customCheckAppRunning
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /T /F /IM "${APP_EXECUTABLE_FILENAME}"'
+  Pop $0
+  Sleep 1000
+!macroend

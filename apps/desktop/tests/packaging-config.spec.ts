@@ -147,6 +147,7 @@ describe('desktop packaging configuration', () => {
       shortcutName: 'DeepSeek Harness',
     })
     expect(windowsInstallerInclude).toContain('--dsh-installer-quit')
+    expect(windowsInstallerInclude).toContain('!macro customCheckAppRunning')
     expect(windowsInstallerInclude).toContain('taskkill.exe')
     expect(windowsInstallerInclude).toContain('/T /F /IM "${APP_EXECUTABLE_FILENAME}"')
     expect(windowsInstallerInclude).toContain('Pop $0')
