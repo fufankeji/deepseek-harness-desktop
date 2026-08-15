@@ -1,0 +1,311 @@
+name: Windows Picker Fix Preview
+
+on:
+  push:
+    branches:
+      - fix/windows-directory-picker-result
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build-and-verify:
+    name: Build and verify Windows x64 preview
+    runs-on: windows-2025
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}\setup-pnpm
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
+
+      - name: Run directory picker regressions
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          packages/host/directory-picker-native/tests/win32-dialog-bindings.spec.ts
+          packages/host/directory-picker-native/tests/win32-dialog.spec.ts
+          packages/host/directory-picker-native/tests/win32-dialog-logic.spec.ts
+
+      - name: Build and stage the Windows runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:DSH_DESKTOP_TARGET_PLATFORM = 'win32'
+          $env:DSH_DESKTOP_TARGET_ARCH = 'x64'
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw "Workspace build exited with $LASTEXITCODE." }
+          pnpm --dir apps/desktop exec node --import tsx scripts/stage-runtime.ts
+          if ($LASTEXITCODE -ne 0) { throw "Runtime staging exited with $LASTEXITCODE." }
+
+      - name: Build the unsigned Windows application and installer
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          DSH_DESKTOP_TARGET_PLATFORM: win32
+          DSH_DESKTOP_TARGET_ARCH: x64
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pnpm exec electron-builder --win dir --x64 --config.forceCodeSigning=false
+          if ($LASTEXITCODE -ne 0) { throw "Windows application build exited with $LASTEXITCODE." }
+          pnpm exec electron-builder --win nsis --x64 `
+            --prepackaged dist/win-unpacked `
+            --config.forceCodeSigning=false
+          if ($LASTEXITCODE -ne 0) { throw "Windows installer build exited with $LASTEXITCODE." }
+
+      - name: Install and select a real folder through the packaged picker
+        id: picker
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName Microsoft.VisualBasic
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
+
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
+          $installers = @(Get-ChildItem $dist -File -Filter '*Setup.exe')
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one Windows installer; found $($installers.Count)."
+          }
+          $installer = $installers[0]
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Silent install exited with $($install.ExitCode)." }
+
+          $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
+            -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
+          if ($applications.Count -ne 1) {
+            throw "Expected exactly one installed application; found $($applications.Count)."
+          }
+          $application = $applications[0]
+          $resources = Join-Path $application.DirectoryName 'resources'
+          $entry = Join-Path $resources 'host\node_modules\@deepseek-ai\dsh-host-directory-picker-native\lib\index.js'
+          $worker = Join-Path $resources 'host\node_modules\@deepseek-ai\dsh-host-directory-picker-native\lib\worker.cjs'
+          $addon = Join-Path $resources 'host\node_modules\@koromix\koffi-win32-x64\win32_x64\koffi.node'
+          foreach ($required in @($entry, $worker, $addon)) {
+            if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+              throw "Packaged picker dependency is missing: $required"
+            }
+          }
+
+          $target = 'C:\dsh-picker-smoke\selected'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          $script = Join-Path $env:RUNNER_TEMP 'verify-packaged-picker-selection.mjs'
+          @'
+          import path from 'node:path'
+          import { pathToFileURL } from 'node:url'
+
+          const entry = process.argv[2]
+          const expected = process.argv[3]
+          const { pickNativeDirectory } = await import(pathToFileURL(entry).href)
+          const controller = new AbortController()
+          const timer = setTimeout(() => controller.abort(), 45_000)
+          try {
+            const selected = await pickNativeDirectory(controller.signal)
+            clearTimeout(timer)
+            if (selected === null) throw new Error('the packaged picker returned cancel instead of a directory')
+            const actualPath = path.resolve(selected).toLowerCase()
+            const expectedPath = path.resolve(expected).toLowerCase()
+            if (actualPath !== expectedPath) {
+              throw new Error(`selected path mismatch: expected ${expected}; received ${selected}`)
+            }
+            console.log(`selected_path=${selected}`)
+            console.log('packaged_directory_selection=PASS')
+          } catch (error) {
+            clearTimeout(timer)
+            console.error(error instanceof Error ? (error.stack ?? error.message) : String(error))
+            process.exitCode = 1
+          }
+          '@ | Set-Content -LiteralPath $script -Encoding utf8
+
+          $stdout = Join-Path $env:RUNNER_TEMP 'picker-selection-stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'picker-selection-stderr.log'
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          $arguments = "`"$script`" `"$entry`" `"$target`""
+          $pickerProcess = Start-Process -FilePath $application.FullName -ArgumentList $arguments `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+
+          try {
+            $title = 'Select Workspace Directory'
+            $titleCondition = [Windows.Automation.PropertyCondition]::new(
+              [Windows.Automation.AutomationElement]::NameProperty,
+              $title
+            )
+            $dialog = $null
+            $dialogDeadline = (Get-Date).AddSeconds(20)
+            while ((Get-Date) -lt $dialogDeadline -and $null -eq $dialog) {
+              Start-Sleep -Milliseconds 250
+              $dialog = [Windows.Automation.AutomationElement]::RootElement.FindFirst(
+                [Windows.Automation.TreeScope]::Children,
+                $titleCondition
+              )
+            }
+            if ($null -eq $dialog) { throw 'The packaged folder dialog did not appear within 20 seconds.' }
+
+            $dialog.SetFocus()
+            Start-Sleep -Milliseconds 500
+            [System.Windows.Forms.SendKeys]::SendWait('^l')
+            Start-Sleep -Milliseconds 250
+            [System.Windows.Forms.SendKeys]::SendWait($target)
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+            Start-Sleep -Seconds 2
+
+            $pickerProcess.Refresh()
+            if (-not $pickerProcess.HasExited) {
+              $dialog = [Windows.Automation.AutomationElement]::RootElement.FindFirst(
+                [Windows.Automation.TreeScope]::Children,
+                $titleCondition
+              )
+              if ($null -eq $dialog) { throw 'The folder dialog disappeared before selection completed.' }
+              $buttonCondition = [Windows.Automation.PropertyCondition]::new(
+                [Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [Windows.Automation.ControlType]::Button
+              )
+              $buttons = $dialog.FindAll([Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+              $selectButton = $null
+              $buttonNames = @()
+              foreach ($button in $buttons) {
+                $buttonNames += $button.Current.Name
+                if ($button.Current.Name -in @('Select Folder', 'Select', 'Open')) {
+                  $selectButton = $button
+                  break
+                }
+              }
+              if ($null -eq $selectButton) {
+                throw "Could not find the folder selection button. Buttons: $($buttonNames -join ', ')"
+              }
+              $invoke = $selectButton.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
+              $invoke.Invoke()
+            }
+
+            if (-not $pickerProcess.WaitForExit(45000)) {
+              throw 'The packaged picker did not return after selecting the folder.'
+            }
+            $pickerProcess.WaitForExit()
+          } finally {
+            $pickerProcess.Refresh()
+            if (-not $pickerProcess.HasExited) {
+              taskkill /PID $pickerProcess.Id /T /F | Out-Host
+            }
+          }
+
+          if (Test-Path $stdout) { Get-Content $stdout | Out-Host }
+          if (Test-Path $stderr) { Get-Content $stderr | Out-Host }
+          if ($pickerProcess.ExitCode -ne 0) {
+            throw "Packaged picker selection exited with $($pickerProcess.ExitCode)."
+          }
+          if (-not (Select-String -LiteralPath $stdout -SimpleMatch 'packaged_directory_selection=PASS' -Quiet)) {
+            throw 'Packaged picker selection did not report PASS.'
+          }
+
+          "application=$($application.FullName)" >> $env:GITHUB_OUTPUT
+          "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          "selected_path=$target" >> $env:GITHUB_OUTPUT
+
+      - name: Launch the packaged Host and uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+          $application = '${{ steps.picker.outputs.application }}'
+          $installer = '${{ steps.picker.outputs.installer }}'
+          $testRoot = Join-Path $env:RUNNER_TEMP 'dsh-windows-picker-fix-smoke'
+          $userData = Join-Path $testRoot 'user-data'
+          $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\Wbem"
+          New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+          $stdout = Join-Path $testRoot 'stdout.log'
+          $stderr = Join-Path $testRoot 'stderr.log'
+          $applicationProcess = Start-Process -FilePath $application `
+            -ArgumentList "--user-data-dir=$userData" `
+            -RedirectStandardOutput $stdout `
+            -RedirectStandardError $stderr `
+            -PassThru
+
+          $deadline = (Get-Date).AddSeconds(75)
+          $hostReady = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 3
+            $applicationProcess.Refresh()
+            if ($applicationProcess.HasExited) { break }
+            $hostProcess = Get-CimInstance Win32_Process |
+              Where-Object {
+                $_.CommandLine -match '@deepseek-ai[\\/]dsh[\\/]lib[\\/]bin\.js' -and
+                $_.CommandLine -match '(^|\s)web(\s|$)'
+              } |
+              Select-Object -First 1
+            if ($null -ne $hostProcess) {
+              $hostReady = $true
+              break
+            }
+          }
+          if (-not $hostReady) {
+            if (Test-Path $stdout) { Get-Content $stdout | Out-Host }
+            if (Test-Path $stderr) { Get-Content $stderr | Out-Host }
+            throw 'The packaged Harness Host did not become observable within 75 seconds.'
+          }
+
+          taskkill /PID $applicationProcess.Id /T /F | Out-Host
+          $applicationDirectory = Split-Path $application
+          $uninstallers = @(Get-ChildItem $applicationDirectory -File -Filter 'Uninstall*.exe')
+          if ($uninstallers.Count -ne 1) {
+            throw "Expected exactly one uninstaller; found $($uninstallers.Count)."
+          }
+          $uninstall = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall exited with $($uninstall.ExitCode)." }
+          $uninstallDeadline = (Get-Date).AddSeconds(30)
+          while ((Get-Date) -lt $uninstallDeadline -and (Test-Path $application)) {
+            Start-Sleep -Seconds 2
+          }
+          if (Test-Path $application) { throw 'The installed application remained after uninstall.' }
+
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
+          $installerFile = Get-Item $installer
+          $hash = (Get-FileHash $installerFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $appAsar = Join-Path $dist 'win-unpacked\resources\app.asar'
+          $appHash = (Get-FileHash $appAsar -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installerFile.Name)" | Set-Content `
+            (Join-Path $dist 'SHA256SUMS-windows-x64-preview.txt') -Encoding ascii
+          @(
+            'native_runner=windows-2025',
+            "source_commit=$env:GITHUB_SHA",
+            'focused_picker_regressions=PASS',
+            'silent_install=PASS',
+            'packaged_directory_selection=PASS',
+            'packaged_host_start=PASS',
+            'silent_uninstall=PASS',
+            "selected_path=${{ steps.picker.outputs.selected_path }}",
+            "app_asar_sha256=$appHash",
+            "installer_sha256=$hash"
+          ) | Set-Content (Join-Path $dist 'WINDOWS_PREVIEW_VERIFICATION.txt') -Encoding ascii
+
+      - name: Upload verified Windows preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeepSeek-Harness-Desktop-0.1.0-rc.5-windows-x64-picker-fix
+          path: |
+            apps/desktop/dist/*Setup.exe
+            apps/desktop/dist/*Setup.exe.blockmap
+            apps/desktop/dist/SHA256SUMS-windows-x64-preview.txt
+            apps/desktop/dist/WINDOWS_PREVIEW_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 7
