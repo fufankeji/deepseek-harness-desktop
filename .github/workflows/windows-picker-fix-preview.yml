@@ -81,6 +81,16 @@ jobs:
           Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName UIAutomationClient
           Add-Type -AssemblyName UIAutomationTypes
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+
+          public static class DshPickerAutomation
+          {
+              [DllImport("user32.dll", SetLastError = true)]
+              public static extern bool PostMessage(IntPtr window, uint message, UIntPtr parameter, IntPtr data);
+          }
+          '@
 
           $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
           $installers = @(Get-ChildItem $dist -File -Filter '*Setup.exe')
@@ -112,10 +122,29 @@ jobs:
           $script = Join-Path $env:RUNNER_TEMP 'verify-packaged-picker-selection.mjs'
           @'
           import path from 'node:path'
+          import { createRequire } from 'node:module'
           import { pathToFileURL } from 'node:url'
 
           const entry = process.argv[2]
           const expected = process.argv[3]
+          const require = createRequire(pathToFileURL(entry))
+          const koffi = require('koffi')
+          const oleaut32 = koffi.load('oleaut32.dll')
+          const allocateString = oleaut32.func('__stdcall', 'SysAllocString', 'void *', ['str16'])
+          const freeString = oleaut32.func('__stdcall', 'SysFreeString', 'void', ['void *'])
+          const pointerProof = 'C:\\dsh-picker-smoke\\pointer-proof'
+          const pointer = allocateString(pointerProof)
+          if (pointer === null) throw new Error('SysAllocString returned null')
+          try {
+            const decoded = koffi.decode.string16(pointer)
+            if (decoded !== pointerProof) {
+              throw new Error(`UTF-16 pointer mismatch: expected ${pointerProof}; received ${decoded}`)
+            }
+            console.log('packaged_utf16_pointer_decode=PASS')
+          } finally {
+            freeString(pointer)
+          }
+
           const { pickNativeDirectory } = await import(pathToFileURL(entry).href)
           const controller = new AbortController()
           const timer = setTimeout(() => controller.abort(), 45_000)
@@ -171,30 +200,21 @@ jobs:
 
             $pickerProcess.Refresh()
             if (-not $pickerProcess.HasExited) {
-              $dialog = [Windows.Automation.AutomationElement]::RootElement.FindFirst(
-                [Windows.Automation.TreeScope]::Children,
-                $titleCondition
+              [System.Windows.Forms.SendKeys]::SendWait('%s')
+              Start-Sleep -Milliseconds 750
+            }
+
+            $pickerProcess.Refresh()
+            if (-not $pickerProcess.HasExited) {
+              $window = [IntPtr]$dialog.Current.NativeWindowHandle
+              if ($window -eq [IntPtr]::Zero) { throw 'The folder dialog did not expose a native window handle.' }
+              $posted = [DshPickerAutomation]::PostMessage(
+                $window,
+                0x0111,
+                [UIntPtr]1,
+                [IntPtr]::Zero
               )
-              if ($null -eq $dialog) { throw 'The folder dialog disappeared before selection completed.' }
-              $buttonCondition = [Windows.Automation.PropertyCondition]::new(
-                [Windows.Automation.AutomationElement]::ControlTypeProperty,
-                [Windows.Automation.ControlType]::Button
-              )
-              $buttons = $dialog.FindAll([Windows.Automation.TreeScope]::Descendants, $buttonCondition)
-              $selectButton = $null
-              $buttonNames = @()
-              foreach ($button in $buttons) {
-                $buttonNames += $button.Current.Name
-                if ($button.Current.Name -in @('Select Folder', 'Select', 'Open')) {
-                  $selectButton = $button
-                  break
-                }
-              }
-              if ($null -eq $selectButton) {
-                throw "Could not find the folder selection button. Buttons: $($buttonNames -join ', ')"
-              }
-              $invoke = $selectButton.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
-              $invoke.Invoke()
+              if (-not $posted) { throw 'The folder dialog rejected its standard IDOK command.' }
             }
 
             if (-not $pickerProcess.WaitForExit(45000)) {
@@ -215,6 +235,9 @@ jobs:
           }
           if (-not (Select-String -LiteralPath $stdout -SimpleMatch 'packaged_directory_selection=PASS' -Quiet)) {
             throw 'Packaged picker selection did not report PASS.'
+          }
+          if (-not (Select-String -LiteralPath $stdout -SimpleMatch 'packaged_utf16_pointer_decode=PASS' -Quiet)) {
+            throw 'Packaged Electron UTF-16 pointer decoding did not report PASS.'
           }
 
           "application=$($application.FullName)" >> $env:GITHUB_OUTPUT
@@ -290,6 +313,7 @@ jobs:
             "source_commit=$env:GITHUB_SHA",
             'focused_picker_regressions=PASS',
             'silent_install=PASS',
+            'packaged_utf16_pointer_decode=PASS',
             'packaged_directory_selection=PASS',
             'packaged_host_start=PASS',
             'silent_uninstall=PASS',
