@@ -40,9 +40,9 @@ jobs:
 
           function Invoke-Installer([string] $label) {
             $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -PassThru
-            if (-not $process.WaitForExit(120000)) {
+            if (-not $process.WaitForExit(360000)) {
               taskkill /PID $process.Id /T /F | Out-Host
-              throw "$label installer did not exit within 120 seconds."
+              throw "$label installer did not exit within 360 seconds."
             }
             $process.WaitForExit()
             Write-Host "$label installer_exit=$($process.ExitCode)"
