@@ -106,12 +106,37 @@ jobs:
               Format-List | Out-Host
           }
 
-          function Invoke-Installer([System.IO.FileInfo] $installer, [string] $label) {
+          function Write-InstallerProcesses([int] $installerPid) {
+            Get-CimInstance Win32_Process |
+              Where-Object {
+                $_.ProcessId -eq $installerPid -or
+                $_.ParentProcessId -eq $installerPid -or
+                $_.Name -match '(?i)(install|uninstall|deepseek)' -or
+                $_.CommandLine -match '(?i)(install|uninstall|deepseek)'
+              } |
+              Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |
+              Format-List | Out-Host
+          }
+
+          function Invoke-Installer(
+            [System.IO.FileInfo] $installer,
+            [string] $label,
+            [int] $timeoutSeconds
+          ) {
             $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -PassThru
-            if (-not $process.WaitForExit(360000)) {
+            $diagnosticSeconds = 360
+            $exited = $process.WaitForExit($diagnosticSeconds * 1000)
+            if (-not $exited -and $timeoutSeconds -gt $diagnosticSeconds) {
+              Write-Host "$label installer still running after $diagnosticSeconds seconds."
+              Write-InstallerProcesses $process.Id
+              Write-HarnessProcesses
+              $exited = $process.WaitForExit(($timeoutSeconds - $diagnosticSeconds) * 1000)
+            }
+            if (-not $exited) {
+              Write-InstallerProcesses $process.Id
               Write-HarnessProcesses
               taskkill /PID $process.Id /T /F | Out-Host
-              throw "$label installer did not exit within 360 seconds."
+              throw "$label installer did not exit within $timeoutSeconds seconds."
             }
             $process.WaitForExit()
             Write-Host "$label installer_exit=$($process.ExitCode)"
@@ -145,7 +170,7 @@ jobs:
           $publishedInstaller = $publishedInstallers[0]
           $fixedInstaller = $fixedInstallers[0]
           Write-Host "published_sha256=$((Get-FileHash $publishedInstaller.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"
-          Invoke-Installer $publishedInstaller 'published-initial'
+          Invoke-Installer $publishedInstaller 'published-initial' 600
 
           $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
             -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
@@ -159,7 +184,7 @@ jobs:
           $running = Start-Process -FilePath $application.FullName -PassThru
           Wait-ForPackagedHost $running.Id 'published'
 
-          Invoke-Installer $fixedInstaller 'fixed-running-upgrade'
+          Invoke-Installer $fixedInstaller 'fixed-running-upgrade' 900
           $running.Refresh()
           if (-not $running.HasExited) {
             taskkill /PID $running.Id /T /F | Out-Host
