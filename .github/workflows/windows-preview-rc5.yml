@@ -163,13 +163,13 @@ jobs:
             Start-Sleep -Seconds 3
             $applicationProcess.Refresh()
             if ($applicationProcess.HasExited) { break }
-            $host = Get-CimInstance Win32_Process |
+            $hostProcess = Get-CimInstance Win32_Process |
               Where-Object {
                 $_.CommandLine -match '@deepseek-ai[\\/]dsh[\\/]lib[\\/]bin\.js' -and
                 $_.CommandLine -match '(^|\s)web(\s|$)'
               } |
               Select-Object -First 1
-            if ($null -ne $host) {
+            if ($null -ne $hostProcess) {
               $hostReady = $true
               break
             }
