@@ -161,7 +161,7 @@ jobs:
             }
             if ($null -eq $dialog) { throw 'The packaged folder dialog did not appear within 20 seconds.' }
 
-            $dialog.SetFocus()
+            [Microsoft.VisualBasic.Interaction]::AppActivate($title)
             Start-Sleep -Milliseconds 500
             [System.Windows.Forms.SendKeys]::SendWait('^l')
             Start-Sleep -Milliseconds 250
