@@ -8,99 +8,206 @@ on:
 permissions:
   contents: read
 
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+
 jobs:
   verify-running-app-upgrade:
-    name: Upgrade while the installed app is running
+    name: Replace the running public preview
     runs-on: windows-2025
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     steps:
-      - name: Download and exercise the published installer
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}\setup-pnpm
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the installer lifecycle contracts
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          apps/desktop/tests/window-lifecycle.spec.ts
+          apps/desktop/tests/packaging-config.spec.ts
+
+      - name: Build and stage the Windows runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:DSH_DESKTOP_TARGET_PLATFORM = 'win32'
+          $env:DSH_DESKTOP_TARGET_ARCH = 'x64'
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw "Workspace build exited with $LASTEXITCODE." }
+          pnpm --dir apps/desktop exec node --import tsx scripts/stage-runtime.ts
+          if ($LASTEXITCODE -ne 0) { throw "Runtime staging exited with $LASTEXITCODE." }
+
+      - name: Build the fixed Windows application and installer
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          DSH_DESKTOP_TARGET_PLATFORM: win32
+          DSH_DESKTOP_TARGET_ARCH: x64
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pnpm exec electron-builder --win dir --x64 --config.forceCodeSigning=false
+          if ($LASTEXITCODE -ne 0) { throw "Windows application build exited with $LASTEXITCODE." }
+          pnpm exec electron-builder --win nsis --x64 `
+            --prepackaged dist/win-unpacked `
+            --config.forceCodeSigning=false
+          if ($LASTEXITCODE -ne 0) { throw "Windows installer build exited with $LASTEXITCODE." }
+
+      - name: Replace the running public preview and relaunch
+        id: acceptance
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = 'desktop-preview-v0.1.0-rc.5'
-          $download = Join-Path $env:RUNNER_TEMP 'published-installer'
-          New-Item -ItemType Directory -Path $download -Force | Out-Null
-          gh release download $tag `
+          $publishedDirectory = Join-Path $env:RUNNER_TEMP 'published-installer'
+          New-Item -ItemType Directory -Path $publishedDirectory -Force | Out-Null
+          gh release download desktop-preview-v0.1.0-rc.5 `
             --repo $env:GITHUB_REPOSITORY `
             --pattern '*Setup.exe' `
-            --dir $download
+            --dir $publishedDirectory
           if ($LASTEXITCODE -ne 0) { throw "Release download exited with $LASTEXITCODE." }
 
-          $installers = @(Get-ChildItem $download -File -Filter '*Setup.exe')
-          if ($installers.Count -ne 1) {
-            throw "Expected exactly one installer; found $($installers.Count)."
+          $publishedInstallers = @(Get-ChildItem $publishedDirectory -File -Filter '*Setup.exe')
+          $fixedInstallers = @(Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist') `
+            -File -Filter '*Setup.exe')
+          if ($publishedInstallers.Count -ne 1) {
+            throw "Expected one published installer; found $($publishedInstallers.Count)."
           }
-          $installer = $installers[0]
-          $digest = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          Write-Host "installer_sha256=$digest"
+          if ($fixedInstallers.Count -ne 1) {
+            throw "Expected one fixed installer; found $($fixedInstallers.Count)."
+          }
 
-          function Invoke-Installer([string] $label) {
+          function Write-HarnessProcesses {
+            Get-CimInstance Win32_Process |
+              Where-Object {
+                $_.Name -like 'DeepSeek Harness*' -or
+                $_.ExecutablePath -like '*DeepSeek Harness*' -or
+                $_.CommandLine -like '*DeepSeek Harness*'
+              } |
+              Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |
+              Format-List | Out-Host
+          }
+
+          function Invoke-Installer([System.IO.FileInfo] $installer, [string] $label) {
             $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -PassThru
             if (-not $process.WaitForExit(360000)) {
+              Write-HarnessProcesses
               taskkill /PID $process.Id /T /F | Out-Host
               throw "$label installer did not exit within 360 seconds."
             }
             $process.WaitForExit()
             Write-Host "$label installer_exit=$($process.ExitCode)"
             if ($process.ExitCode -ne 0) {
-              Get-CimInstance Win32_Process |
-                Where-Object { $_.Name -like 'DeepSeek Harness*' -or $_.ExecutablePath -like '*DeepSeek Harness*' } |
-                Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |
-                Format-List | Out-Host
+              Write-HarnessProcesses
               throw "$label installer exited with $($process.ExitCode)."
             }
           }
 
-          Invoke-Installer 'initial'
+          function Wait-ForPackagedHost([int] $applicationPid, [string] $label) {
+            $deadline = (Get-Date).AddSeconds(90)
+            while ((Get-Date) -lt $deadline) {
+              Start-Sleep -Seconds 3
+              $application = Get-Process -Id $applicationPid -ErrorAction SilentlyContinue
+              if ($null -eq $application) { throw "$label application exited before Host readiness." }
+              $hostProcess = Get-CimInstance Win32_Process |
+                Where-Object {
+                  $_.CommandLine -match '@deepseek-ai[\\/]dsh[\\/]lib[\\/]bin\.js' -and
+                  $_.CommandLine -match '(^|\s)web(\s|$)'
+                } |
+                Select-Object -First 1
+              if ($null -ne $hostProcess) {
+                Write-Host "$label host_pid=$($hostProcess.ProcessId)"
+                return
+              }
+            }
+            Write-HarnessProcesses
+            throw "$label Host did not become observable within 90 seconds."
+          }
+
+          $publishedInstaller = $publishedInstallers[0]
+          $fixedInstaller = $fixedInstallers[0]
+          Write-Host "published_sha256=$((Get-FileHash $publishedInstaller.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"
+          Invoke-Installer $publishedInstaller 'published-initial'
+
           $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
             -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
           if ($applications.Count -ne 1) {
-            throw "Expected exactly one installed application; found $($applications.Count)."
+            throw "Expected one installed application; found $($applications.Count)."
           }
           $application = $applications[0]
           $testRoot = Join-Path $env:RUNNER_TEMP 'dsh-running-upgrade'
-          $userData = Join-Path $testRoot 'user-data'
           $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
           New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
-          $running = Start-Process -FilePath $application.FullName `
-            -ArgumentList "--user-data-dir=$userData" `
-            -PassThru
+          $running = Start-Process -FilePath $application.FullName -PassThru
+          Wait-ForPackagedHost $running.Id 'published'
 
-          Start-Sleep -Seconds 15
-          $running.Refresh()
-          if ($running.HasExited) {
-            throw "Installed application exited before the upgrade test with $($running.ExitCode)."
-          }
-          Write-Host "running_application_pid=$($running.Id)"
-
-          Invoke-Installer 'running-upgrade'
+          Invoke-Installer $fixedInstaller 'fixed-running-upgrade'
           $running.Refresh()
           if (-not $running.HasExited) {
             taskkill /PID $running.Id /T /F | Out-Host
-            throw 'The original application process remained after the upgrade.'
+            throw 'The public application process remained after the fixed upgrade.'
           }
           if (-not (Test-Path -LiteralPath $application.FullName -PathType Leaf)) {
-            throw 'The installed application is missing after the upgrade.'
+            throw 'The installed application is missing after the fixed upgrade.'
           }
 
-          $afterUpgrade = Start-Process -FilePath $application.FullName `
-            -ArgumentList "--user-data-dir=$userData" `
-            -PassThru
-          Start-Sleep -Seconds 15
-          $afterUpgrade.Refresh()
-          if ($afterUpgrade.HasExited) {
-            throw "Upgraded application exited with $($afterUpgrade.ExitCode)."
-          }
-          Write-Host 'running_app_upgrade=PASS'
+          $afterUpgrade = Start-Process -FilePath $application.FullName -PassThru
+          Wait-ForPackagedHost $afterUpgrade.Id 'fixed'
+          Write-Host 'running_public_preview_upgrade=PASS'
           taskkill /PID $afterUpgrade.Id /T /F | Out-Host
 
           $uninstallers = @(Get-ChildItem $application.DirectoryName -File -Filter 'Uninstall*.exe')
           if ($uninstallers.Count -ne 1) {
-            throw "Expected exactly one uninstaller; found $($uninstallers.Count)."
+            throw "Expected one uninstaller; found $($uninstallers.Count)."
           }
           $uninstall = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstall exited with $($uninstall.ExitCode)." }
+
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
+          $hotfixName = 'DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.5-Installer-Fix.exe'
+          $hotfixPath = Join-Path $dist $hotfixName
+          Copy-Item -LiteralPath $fixedInstaller.FullName -Destination $hotfixPath
+          $hash = (Get-FileHash $hotfixPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            'native_runner=windows-2025',
+            "source_commit=$env:GITHUB_SHA",
+            'focused_installer_contracts=PASS',
+            'published_initial_install=PASS',
+            'published_packaged_host_start=PASS',
+            'running_public_preview_upgrade=PASS',
+            'fixed_packaged_host_start=PASS',
+            'silent_uninstall=PASS',
+            "installer_sha256=$hash"
+          ) | Set-Content (Join-Path $dist 'WINDOWS_INSTALLER_FIX_VERIFICATION.txt') -Encoding ascii
+          "$hash  $hotfixName" | Set-Content `
+            (Join-Path $dist 'SHA256SUMS-windows-installer-fix.txt') -Encoding ascii
+          "hotfix_path=$hotfixPath" >> $env:GITHUB_OUTPUT
+
+      - name: Upload the verified Windows installer fix
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeepSeek-Harness-Desktop-0.1.0-rc.5-windows-installer-fix
+          path: |
+            ${{ steps.acceptance.outputs.hotfix_path }}
+            apps/desktop/dist/WINDOWS_INSTALLER_FIX_VERIFICATION.txt
+            apps/desktop/dist/SHA256SUMS-windows-installer-fix.txt
+          if-no-files-found: error
+          retention-days: 7
