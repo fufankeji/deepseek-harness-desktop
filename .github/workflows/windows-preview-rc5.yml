@@ -1,0 +1,219 @@
+name: Windows Preview rc.5
+
+on:
+  push:
+    branches:
+      - ci/windows-preview-rc5
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+  MACOS_PREVIEW_TAG: desktop-preview-v0.1.0-rc.5
+  MACOS_PREVIEW_ASSET: DeepSeek-Harness-Desktop-0.1.0-rc.5-macos-arm64-preview.zip
+  EXPECTED_APP_ASAR_SHA256: 502566e72c17f2f3eb2f44567ca8ef03ad09994d270e749b53893169051dd729
+
+jobs:
+  build-and-smoke:
+    name: Build and smoke Windows x64 preview
+    runs-on: windows-2025
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}\setup-pnpm
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install packaging dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download the exact accepted macOS payload
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $download = Join-Path $env:RUNNER_TEMP 'accepted-preview'
+          New-Item -ItemType Directory -Path $download | Out-Null
+          gh release download $env:MACOS_PREVIEW_TAG `
+            --repo $env:GITHUB_REPOSITORY `
+            --pattern $env:MACOS_PREVIEW_ASSET `
+            --dir $download
+
+      - name: Prepare the accepted application payload
+        id: payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP "accepted-preview\$env:MACOS_PREVIEW_ASSET"
+          $expanded = Join-Path $env:RUNNER_TEMP 'accepted-preview-expanded'
+          7z x $archive "-o$expanded" -y | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "7z exited with $LASTEXITCODE" }
+
+          $resources = Join-Path $expanded 'DeepSeek Harness.app\Contents\Resources'
+          $appAsar = Join-Path $resources 'app.asar'
+          if (-not (Test-Path -LiteralPath $appAsar -PathType Leaf)) {
+            throw "Accepted app.asar is missing at $appAsar"
+          }
+          $appHash = (Get-FileHash -LiteralPath $appAsar -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($appHash -ne $env:EXPECTED_APP_ASAR_SHA256) {
+            throw "Accepted app.asar hash is $appHash; expected $env:EXPECTED_APP_ASAR_SHA256"
+          }
+
+          $asarCli = Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE 'node_modules\.pnpm') `
+            -Recurse -File -Filter asar.js |
+            Where-Object FullName -Like '*@electron+asar@*\node_modules\@electron\asar\bin\asar.js' |
+            Select-Object -First 1
+          if ($null -eq $asarCli) { throw 'The @electron/asar CLI was not installed.' }
+          $appSource = Join-Path $env:RUNNER_TEMP 'accepted-app-source'
+          & node $asarCli.FullName extract $appAsar $appSource
+          if ($LASTEXITCODE -ne 0) { throw "asar extraction exited with $LASTEXITCODE" }
+
+          $desktop = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop'
+          Remove-Item (Join-Path $desktop 'lib') -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item (Join-Path $appSource 'lib') (Join-Path $desktop 'lib') -Recurse
+          Remove-Item (Join-Path $desktop 'runtime-host') -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item (Join-Path $resources 'host') (Join-Path $desktop 'runtime-host') -Recurse
+          Remove-Item (Join-Path $desktop 'resources') -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item (Join-Path $resources 'desktop-resources') (Join-Path $desktop 'resources') -Recurse
+
+          "app_asar=$appAsar" >> $env:GITHUB_OUTPUT
+
+      - name: Build the Windows x64 application shell
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          DSH_DESKTOP_TARGET_PLATFORM: win32
+          DSH_DESKTOP_TARGET_ARCH: x64
+        run: |
+          pnpm exec electron-builder --win dir --x64 --config.forceCodeSigning=false
+
+      - name: Restore the byte-exact accepted app.asar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $destination = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist\win-unpacked\resources\app.asar'
+          Copy-Item -LiteralPath '${{ steps.payload.outputs.app_asar }}' -Destination $destination -Force
+          $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $env:EXPECTED_APP_ASAR_SHA256) {
+            throw "Windows app.asar hash is $hash; expected $env:EXPECTED_APP_ASAR_SHA256"
+          }
+
+      - name: Build the unsigned NSIS preview installer
+        shell: pwsh
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          DSH_DESKTOP_TARGET_PLATFORM: win32
+          DSH_DESKTOP_TARGET_ARCH: x64
+        run: |
+          pnpm exec electron-builder --win nsis --x64 `
+            --prepackaged dist/win-unpacked `
+            --config.forceCodeSigning=false
+
+      - name: Install, launch Host, and uninstall on Windows
+        id: smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
+          $installers = @(Get-ChildItem $dist -File -Filter '*Setup.exe')
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one Windows installer; found $($installers.Count)."
+          }
+          $installer = $installers[0]
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Silent install exited with $($install.ExitCode)." }
+
+          $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
+            -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
+          if ($applications.Count -ne 1) {
+            throw "Expected exactly one installed application; found $($applications.Count)."
+          }
+          $application = $applications[0]
+          $testRoot = Join-Path $env:RUNNER_TEMP 'dsh-windows-preview-smoke'
+          $userData = Join-Path $testRoot 'user-data'
+          $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\Wbem"
+          New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+          $stdout = Join-Path $testRoot 'stdout.log'
+          $stderr = Join-Path $testRoot 'stderr.log'
+          $applicationProcess = Start-Process -FilePath $application.FullName `
+            -ArgumentList "--user-data-dir=$userData" `
+            -RedirectStandardOutput $stdout `
+            -RedirectStandardError $stderr `
+            -PassThru
+
+          $deadline = (Get-Date).AddSeconds(75)
+          $hostReady = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 3
+            $applicationProcess.Refresh()
+            if ($applicationProcess.HasExited) { break }
+            $host = Get-CimInstance Win32_Process |
+              Where-Object {
+                $_.CommandLine -match '@deepseek-ai[\\/]dsh[\\/]lib[\\/]bin\.js' -and
+                $_.CommandLine -match '(^|\s)web(\s|$)'
+              } |
+              Select-Object -First 1
+            if ($null -ne $host) {
+              $hostReady = $true
+              break
+            }
+          }
+          if (-not $hostReady) {
+            if (Test-Path $stdout) { Get-Content $stdout | Out-Host }
+            if (Test-Path $stderr) { Get-Content $stderr | Out-Host }
+            throw 'The packaged Harness Host did not become observable within 75 seconds.'
+          }
+
+          taskkill /PID $applicationProcess.Id /T /F | Out-Host
+          $uninstallers = @(Get-ChildItem $application.DirectoryName -File -Filter 'Uninstall*.exe')
+          if ($uninstallers.Count -ne 1) {
+            throw "Expected exactly one uninstaller; found $($uninstallers.Count)."
+          }
+          $uninstall = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall exited with $($uninstall.ExitCode)." }
+          $uninstallDeadline = (Get-Date).AddSeconds(30)
+          while ((Get-Date) -lt $uninstallDeadline -and (Test-Path $application.FullName)) {
+            Start-Sleep -Seconds 2
+          }
+          if (Test-Path $application.FullName) { throw 'The installed application remained after uninstall.' }
+
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = Join-Path $dist 'SHA256SUMS-windows-x64-preview.txt'
+          "$hash  $($installer.Name)" | Set-Content $checksum -Encoding ascii
+          @(
+            'native_runner=windows-2025',
+            'silent_install=PASS',
+            'packaged_host_start=PASS',
+            'silent_uninstall=PASS',
+            "app_asar_sha256=$env:EXPECTED_APP_ASAR_SHA256",
+            "installer_sha256=$hash"
+          ) | Set-Content (Join-Path $dist 'WINDOWS_PREVIEW_VERIFICATION.txt') -Encoding ascii
+          "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload verified Windows preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeepSeek-Harness-Desktop-0.1.0-rc.5-windows-x64-preview
+          path: |
+            apps/desktop/dist/*Setup.exe
+            apps/desktop/dist/*Setup.exe.blockmap
+            apps/desktop/dist/SHA256SUMS-windows-x64-preview.txt
+            apps/desktop/dist/WINDOWS_PREVIEW_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 7
