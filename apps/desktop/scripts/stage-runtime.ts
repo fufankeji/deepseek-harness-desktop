@@ -29,7 +29,10 @@ interface Manifest {
 
 async function run(command: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((accept, reject) => {
-    const child = spawn(command, args, { cwd: repositoryRoot, env: { ...process.env, CI: 'true' }, stdio: 'inherit' })
+    // Maintained Node releases reject direct `.cmd` spawning on Windows;
+    // repository-owned pnpm arguments are safe to route through cmd.exe.
+    const shell = process.platform === 'win32' && command.toLowerCase().endsWith('.cmd')
+    const child = spawn(command, args, { cwd: repositoryRoot, env: { ...process.env, CI: 'true' }, shell, stdio: 'inherit' })
     child.once('error', reject)
     child.once('exit', (code, signal) => {
       if (code === 0) accept()
