@@ -1,0 +1,98 @@
+name: Windows Directory Picker Diagnostic
+
+on:
+  push:
+    branches:
+      - ci/windows-directory-picker-diagnostic
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Run the released picker under packaged Electron
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download the released Windows preview
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $download = Join-Path $env:RUNNER_TEMP 'released-preview'
+          New-Item -ItemType Directory -Path $download | Out-Null
+          gh release download desktop-preview-v0.1.0-rc.5 `
+            --repo $env:GITHUB_REPOSITORY `
+            --pattern 'DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.5-Setup.exe' `
+            --dir $download
+
+      - name: Install the released Windows preview
+        id: install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-Item (Join-Path $env:RUNNER_TEMP 'released-preview\DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.5-Setup.exe')
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Silent install exited with $($install.ExitCode)." }
+          $applications = @(Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') `
+            -Recurse -File -Filter 'DeepSeek Harness.exe' -ErrorAction SilentlyContinue)
+          if ($applications.Count -ne 1) {
+            throw "Expected one installed application; found $($applications.Count)."
+          }
+          "application=$($applications[0].FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Exercise the packaged Win32 directory picker
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $application = '${{ steps.install.outputs.application }}'
+          $resources = Join-Path (Split-Path $application) 'resources'
+          $entry = Join-Path $resources 'host\node_modules\@deepseek-ai\dsh-host-directory-picker-native\lib\index.js'
+          $worker = Join-Path $resources 'host\node_modules\@deepseek-ai\dsh-host-directory-picker-native\lib\worker.cjs'
+          $addon = Join-Path $resources 'host\node_modules\@koromix\koffi-win32-x64\win32_x64\koffi.node'
+          foreach ($required in @($entry, $worker, $addon)) {
+            if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+              throw "Packaged picker dependency is missing: $required"
+            }
+          }
+
+          $script = Join-Path $env:RUNNER_TEMP 'exercise-packaged-picker.mjs'
+          @'
+          import { pathToFileURL } from 'node:url'
+
+          const entry = process.argv[2]
+          const { pickNativeDirectory } = await import(pathToFileURL(entry).href)
+          const controller = new AbortController()
+          const timer = setTimeout(() => controller.abort(), 1500)
+          try {
+            const path = await pickNativeDirectory(controller.signal)
+            clearTimeout(timer)
+            console.error(`picker returned before the controlled abort: ${String(path)}`)
+            process.exitCode = 1
+          } catch (error) {
+            clearTimeout(timer)
+            const message = error instanceof Error ? (error.stack ?? error.message) : String(error)
+            console.error(message)
+            if (controller.signal.aborted && /native directory picker aborted/u.test(message)) {
+              console.log('packaged_win32_directory_picker=PASS')
+            } else {
+              process.exitCode = 1
+            }
+          }
+          '@ | Set-Content -LiteralPath $script -Encoding utf8
+
+          $stdout = Join-Path $env:RUNNER_TEMP 'picker-stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'picker-stderr.log'
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          $arguments = "`"$script`" `"$entry`""
+          $picker = Start-Process -FilePath $application -ArgumentList $arguments `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr -Wait -PassThru
+          if (Test-Path $stdout) { Get-Content $stdout | Out-Host }
+          if (Test-Path $stderr) { Get-Content $stderr | Out-Host }
+          if ($picker.ExitCode -ne 0) { throw "Packaged picker smoke exited with $($picker.ExitCode)." }
