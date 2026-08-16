@@ -20,7 +20,7 @@
 
 <p align="center"><strong>Built by Beyondata · A modern desktop development experience for the DeepSeek Harness ecosystem</strong></p>
 
-<p align="center"><strong>Search, verify, install, and remove DSH plugins from the public ecosystem · Let DeepSeek understand images</strong></p>
+<p align="center"><strong>Not sure what to install? Discover featured, recently updated, and ecosystem-popular plugins every day · Search, verify, install, and manage</strong></p>
 
 <p align="center">DeepSeek Harness Studio combines the local Web workspace, Host lifecycle management, and a native desktop window into a development environment that developers can download as source, modify directly, and continue building locally.</p>
 
@@ -36,7 +36,8 @@
 
 | Capability | Status | What it enables |
 | --- | --- | --- |
-| **Public Plugin Center** | ✅ | Discover plugins and Bundle-wrapped Skill Packs carrying the `dsh-plugin` keyword in the public npm ecosystem, inspect details and risk, install them online, and enable, disable, or uninstall them. |
+| **Plugin Discovery and recommendations** | ✅ | Read the public catalog automatically, browse featured, recently updated, ecosystem-popular, and scenario-based recommendations, and search by name, capability, or publisher. |
+| **Public Plugin Center** | ✅ | Inspect exact versions, capabilities, permissions, compatibility, and risk, install online, and manage plugin enablement, updates, disabling, and removal. |
 | **Desktop development workspace** | ✅ | Open local projects, manage sessions and workspaces, use Harness models, tools, Skills, and plugins, and modify the complete source code directly. |
 | **Vision enhancement** | ✅ | Add image understanding to a text-based DeepSeek workflow by reading conversation attachments and workspace images, then providing traceable observations to the Agent. |
 | **Chinese DeepSeek controls** | ✅ | Choose Chinese permission levels and DeepSeek-specific thinking modes directly in the composer for the current session. |
@@ -60,10 +61,41 @@ Desktop installers are published only through this repository's GitHub Releases 
 - **Electron desktop app**: application window, system tray, single-instance behavior, external-link handling, and a restricted preload bridge.
 - **Local Harness Host**: the desktop main process starts `dsh web`, waits for the local service to become ready, and stops the Host process when the app exits.
 - **Web workspace**: DeepSeek Harness sessions, workspaces, models, tools, Skills, and plugin runtime remain available.
+- **Plugin Discovery and recommendations**: read the online catalog and use featured, recently updated, ecosystem-popular, scenario filters, and search to find plugins worth trying.
 - **Public Plugin Center**: search the public npm `dsh-plugin` ecosystem, verify the exact version, artifact integrity, Bundle declaration, and local compatibility before installation, then enable, disable, or uninstall entries from the Installed view.
 - **Composer vision enhancement**: enable Bailian Qwen3.8 image understanding in one click for screenshots, photos, charts, OCR, and workspace images without replacing the current DeepSeek model.
 - **Desktop appearance settings**: built-in Whale Maid and Cloud Cat skins, plus local backgrounds, subject focus, and interface glass controls.
 - **Complete development source**: desktop app, Web interface, CLI, capability packages, native helpers, Python SDK, examples, and build scripts are kept in the repository.
+
+## Plugin ecosystem: discover what is worth installing, then manage it
+
+### Plugin Discovery: start here when you do not know what to install
+
+Not sure where to find plugins, which ones were updated recently, or what the ecosystem is paying attention to? Open **Plugin Discovery** from the sidebar. The app reads the online catalog automatically and turns scattered packages into a recommendation page you can browse and act on directly.
+
+<p align="center">
+  <img src="assets/plugin-discovery-desktop.png" alt="Real DeepSeek Harness Studio Plugin Discovery desktop interface" width="100%">
+  <br><sub>Real Desktop interface: catalog feature, recently updated, ecosystem popular, scenario filters, search, and install or management actions.</sub>
+</p>
+
+- **A fresh place to start every day**: see catalog features, recently updated entries, and ecosystem-popular plugins without searching repositories one by one.
+- **Filter by scenario**: browse Agents and workflows, Web UI, browser and search, vision and media, memory and context, models and services, developer tools, or integrations and notifications.
+- **Search for the answer directly**: search by plugin name, capability keyword, or publisher, then inspect its icon, summary, version, and update time.
+- **Act as soon as you discover it**: start the trusted installation flow for a new plugin, or jump to Plugin Center management for an installed one.
+
+### Plugin Center: install, enable, disable, and remove online
+
+<p align="center">
+  <img src="assets/plugin-center-avatars-desktop.png" alt="Real DeepSeek Harness Studio public Plugin Center interface" width="100%">
+  <br><sub>Real Desktop interface: plugin avatars, public catalog, Installed area, Install buttons, and three-dot management actions.</sub>
+</p>
+
+After choosing a plugin, open **Plugin Center** to inspect plugins and Skill Packs in the public npm Registry that carry the `dsh-plugin` keyword and follow the DeepSeek Harness Bundle format, then complete the workflow from risk confirmation through runtime verification.
+
+- **Online discovery**: search public plugins and inspect versions, capabilities, permissions, compatibility, and risk.
+- **One-click installation**: download and verify an exact package version, integrity metadata, and Bundle declaration; after confirmation, Desktop installs it, restarts the Harness Host, and verifies runtime state.
+- **Installed management**: review system, public-catalog, and local sources together, then enable, disable, update, or uninstall an entry from its three-dot menu.
+- **Safe removal**: uninstall retains configuration and plugin data by default; deleting data requires a separate user confirmation.
 
 ## Built-in skins and custom backgrounds
 
@@ -79,20 +111,6 @@ Open **Settings → Background** to switch built-in skins. For a custom image, t
     <td><strong>Cloud Cat</strong><br>The original soft blue-and-white cat theme remains available as a calm, low-distraction option.</td>
   </tr>
 </table>
-
-## Public Plugin Center: discover, install, and remove online
-
-<p align="center">
-  <img src="assets/plugin-center-avatars-desktop.png" alt="Real DeepSeek Harness Studio public Plugin Center interface" width="100%">
-  <br><sub>Real Desktop interface: plugin avatars, public catalog, Installed area, Install buttons, and three-dot management actions.</sub>
-</p>
-
-Open **Plugin Center** from the sidebar to search plugins and Skill Packs in the public npm Registry that carry the `dsh-plugin` keyword and follow the DeepSeek Harness Bundle format.
-
-- **Online discovery**: search public plugins and inspect versions, capabilities, permissions, compatibility, and risk.
-- **One-click installation**: download and verify an exact package version, integrity metadata, and Bundle declaration; after confirmation, Desktop installs it, restarts the Harness Host, and verifies runtime state.
-- **Installed management**: review system, public-catalog, and local sources together, then enable, disable, update, or uninstall an entry from its three-dot menu.
-- **Safe removal**: uninstall retains configuration and plugin data by default; deleting data requires a separate user confirmation.
 
 ## Chinese permissions and DeepSeek model controls
 
