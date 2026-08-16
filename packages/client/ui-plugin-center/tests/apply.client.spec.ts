@@ -7,6 +7,8 @@ import { usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject, NS } from '../src/client/index.ts'
 import { PluginCenterNavItem, type PluginCenterNavInjected } from '../src/client/PluginCenterNavItem.tsx'
 import { PluginCenterTab, type PluginCenterTabInjected } from '../src/client/PluginCenterTab.tsx'
+import { PluginDiscoveryNavItem, type PluginDiscoveryNavInjected } from '../src/client/PluginDiscoveryNavItem.tsx'
+import { PluginDiscoveryPage, type PluginDiscoveryInjected } from '../src/client/PluginDiscoveryPage.tsx'
 import { compatibilityDecision, installedListResult, listResult } from './fixtures.ts'
 
 usePinnedBrowserLanguages('zh-CN')
@@ -76,24 +78,37 @@ function declare(slots: SlotRegistry): () => void {
 }
 
 describe('ui-plugin-center browser plugin', () => {
-  it('registers a localized first-level action and independent keyed page', async () => {
+  it('registers localized Plugin Center and Plugin Discovery pages', async () => {
     const b = await bench(true)
     declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
 
     expect(inject).toEqual(['slots', 'layout', 'locale', 'settingsNavigation'])
-    const nav = b.slots.entries('sidebar.primary.action')[0]!
-    const page = b.slots.entries('main.page')[0]!
+    const navs = b.slots.entries('sidebar.primary.action')
+    const pages = b.slots.entries('main.page')
+    const nav = navs.find(entry => entry.options.id === 'plugin-center')!
+    const discoveryNav = navs.find(entry => entry.options.id === 'plugin-discovery')!
+    const page = pages.find(entry => entry.options.key === 'plugin-center')!
+    const discoveryPage = pages.find(entry => entry.options.key === 'plugin-discovery')!
     expect(nav.component).toBe(PluginCenterNavItem)
     expect(nav.options).toMatchObject({ id: 'plugin-center', order: 20 })
+    expect(discoveryNav.component).toBe(PluginDiscoveryNavItem)
+    expect(discoveryNav.options).toMatchObject({ id: 'plugin-discovery', order: 21 })
     expect(page.component).toBe(PluginCenterTab)
     expect(page.options).toMatchObject({ key: 'plugin-center' })
+    expect(discoveryPage.component).toBe(PluginDiscoveryPage)
+    expect(discoveryPage.options).toMatchObject({ key: 'plugin-discovery' })
     expect(nav.locale).toBe(NS)
+    expect(discoveryNav.locale).toBe(NS)
     expect(page.locale).toBe(NS)
+    expect(discoveryPage.locale).toBe(NS)
 
     const navFace = (nav.inject as unknown as () => PluginCenterNavInjected)()
     navFace.open()
     expect(b.layout.openPrimaryPage).toHaveBeenCalledWith('plugin-center')
+    const discoveryNavFace = (discoveryNav.inject as unknown as () => PluginDiscoveryNavInjected)()
+    discoveryNavFace.open()
+    expect(b.layout.openPrimaryPage).toHaveBeenCalledWith('plugin-discovery')
 
     const face = (page.inject as unknown as () => PluginCenterTabInjected)()
     expect(face.available).toBe(true)
@@ -129,6 +144,23 @@ describe('ui-plugin-center browser plugin', () => {
     expect(b.getOwnedDataOffer).toHaveBeenCalledOnce()
     expect(b.removeOwnedData).toHaveBeenCalledOnce()
     expect(b.retainOwnedData).toHaveBeenCalledOnce()
+
+    const discoveryFace = (discoveryPage.inject as unknown as () => PluginDiscoveryInjected)()
+    expect(discoveryFace.available).toBe(true)
+    expect(discoveryFace.development).toBe(false)
+    expect(discoveryFace.mutationsEnabled).toBe(false)
+    await discoveryFace.list(query)
+    await discoveryFace.refresh(query)
+    await discoveryFace.detail({ pluginId: 'fixture.workspace-tools', version: '1.0.0' })
+    await discoveryFace.checkCompatibility({
+      pluginId: 'fixture.workspace-tools', version: '1.0.0', action: 'install',
+    })
+    await discoveryFace.listInstalled()
+    await discoveryFace.getOperation()
+    const stopDiscovery = discoveryFace.onOperationState(() => {})
+    stopDiscovery()
+    discoveryFace.openPluginCenter()
+    expect(b.layout.openPrimaryPage).toHaveBeenLastCalledWith('plugin-center')
     await b.ctx.fiber.dispose()
   })
 
@@ -139,10 +171,11 @@ describe('ui-plugin-center browser plugin', () => {
     expect(b.slots.entries('main.page')).toHaveLength(0)
     const stop = declare(b.slots)
     await vi.waitFor(() => {
-      expect(b.slots.entries('sidebar.primary.action')).toHaveLength(1)
-      expect(b.slots.entries('main.page')).toHaveLength(1)
+      expect(b.slots.entries('sidebar.primary.action')).toHaveLength(2)
+      expect(b.slots.entries('main.page')).toHaveLength(2)
     })
-    const face = (b.slots.entries('main.page')[0]!.inject as unknown as () => PluginCenterTabInjected)()
+    const pluginCenterPage = b.slots.entries('main.page').find(entry => entry.options.key === 'plugin-center')!
+    const face = (pluginCenterPage.inject as unknown as () => PluginCenterTabInjected)()
     expect(face.available).toBe(false)
     expect(face.development).toBe(false)
     expect(face.mutationsEnabled).toBe(false)
@@ -150,11 +183,12 @@ describe('ui-plugin-center browser plugin', () => {
     stop()
     expect(b.slots.entries('main.page')).toHaveLength(0)
     declare(b.slots)
-    await vi.waitFor(() => { expect(b.slots.entries('main.page')).toHaveLength(1) })
+    await vi.waitFor(() => { expect(b.slots.entries('main.page')).toHaveLength(2) })
     b.locale.setLocale('en')
     await fiber.dispose()
     expect(b.slots.entries('main.page')).toHaveLength(0)
     expect(b.layout.closePrimaryPage).toHaveBeenCalledWith('plugin-center')
+    expect(b.layout.closePrimaryPage).toHaveBeenCalledWith('plugin-discovery')
     await b.ctx.fiber.dispose()
   })
 
@@ -166,7 +200,8 @@ describe('ui-plugin-center browser plugin', () => {
     const b = await bench(false)
     declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
-    const face = (b.slots.entries('main.page')[0]!.inject as unknown as () => PluginCenterTabInjected)()
+    const pluginCenterPage = b.slots.entries('main.page').find(entry => entry.options.key === 'plugin-center')!
+    const face = (pluginCenterPage.inject as unknown as () => PluginCenterTabInjected)()
     expect(face.available).toBe(true)
     expect(face.development).toBe(true)
     expect(face.mutationsEnabled).toBe(true)

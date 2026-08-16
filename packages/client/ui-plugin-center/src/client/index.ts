@@ -8,6 +8,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { resolveCatalogBridge } from './bridge.ts'
 import { PluginCenterNavItem, type PluginCenterNavInjected } from './PluginCenterNavItem.tsx'
 import { PluginCenterTab, type PluginCenterTabInjected } from './PluginCenterTab.tsx'
+import { PluginDiscoveryNavItem, type PluginDiscoveryNavInjected } from './PluginDiscoveryNavItem.tsx'
+import { PluginDiscoveryPage, type PluginDiscoveryInjected } from './PluginDiscoveryPage.tsx'
 import { en, zh, type PluginCenterLocaleKey } from './locales.ts'
 
 export type { DesktopCatalogBridge } from './bridge.ts'
@@ -26,7 +28,8 @@ export const NS = 'pluginCenter'
 /** Services used by the slot contribution. */
 export const inject = ['slots', 'layout', 'locale', 'settingsNavigation']
 
-const PAGE_ID = 'plugin-center'
+const PLUGIN_CENTER_PAGE_ID = 'plugin-center'
+const PLUGIN_DISCOVERY_PAGE_ID = 'plugin-discovery'
 
 /** Add the Desktop-only catalog as a first-level page without replacing Settings. */
 export function apply(ctx: ClientContext): void {
@@ -62,25 +65,59 @@ export function apply(ctx: ClientContext): void {
   })
 
   const navInjected = (): PluginCenterNavInjected => ({
-    pageId: PAGE_ID,
-    open: () => { ctx.layout.openPrimaryPage(PAGE_ID) },
+    pageId: PLUGIN_CENTER_PAGE_ID,
+    open: () => { ctx.layout.openPrimaryPage(PLUGIN_CENTER_PAGE_ID) },
+  })
+  const discoveryNavInjected = (): PluginDiscoveryNavInjected => ({
+    pageId: PLUGIN_DISCOVERY_PAGE_ID,
+    open: () => { ctx.layout.openPrimaryPage(PLUGIN_DISCOVERY_PAGE_ID) },
+  })
+  const discoveryInjected = (): PluginDiscoveryInjected => ({
+    available: bridge !== undefined,
+    development: resolved.development,
+    list: query => bridge === undefined ? unavailable() : bridge.catalog.list(query),
+    refresh: query => bridge === undefined ? unavailable() : bridge.catalog.refresh(query),
+    detail: query => bridge === undefined ? unavailable() : bridge.catalog.detail(query),
+    checkCompatibility: request => bridge === undefined ? unavailable() : bridge.catalog.checkCompatibility(request),
+    listInstalled: () => bridge === undefined ? unavailable() : bridge.installedPlugins.list(),
+    mutationsEnabled: bridge?.pluginOperations.mutationsEnabled ?? false,
+    install: request => bridge === undefined ? unavailable() : bridge.pluginOperations.install(request),
+    getOperation: () => bridge === undefined ? Promise.resolve(null) : bridge.pluginOperations.getOperation(),
+    onOperationState: listener => bridge === undefined ? () => {} : bridge.pluginOperations.onState(listener),
+    openPluginCenter: () => { ctx.layout.openPrimaryPage(PLUGIN_CENTER_PAGE_ID) },
   })
 
   ctx.slots.inject('sidebar.primary.action', () => ctx.slots.register({
     name: 'sidebar.primary.action',
-    id: PAGE_ID,
+    id: PLUGIN_CENTER_PAGE_ID,
     order: 20,
     locale: NS,
     inject: navInjected,
   }, PluginCenterNavItem))
+  ctx.slots.inject('sidebar.primary.action', () => ctx.slots.register({
+    name: 'sidebar.primary.action',
+    id: PLUGIN_DISCOVERY_PAGE_ID,
+    order: 21,
+    locale: NS,
+    inject: discoveryNavInjected,
+  }, PluginDiscoveryNavItem))
   ctx.slots.inject('main.page', () => ctx.slots.register({
     name: 'main.page',
-    key: PAGE_ID,
+    key: PLUGIN_CENTER_PAGE_ID,
     locale: NS,
     inject: injected,
   }, PluginCenterTab))
+  ctx.slots.inject('main.page', () => ctx.slots.register({
+    name: 'main.page',
+    key: PLUGIN_DISCOVERY_PAGE_ID,
+    locale: NS,
+    inject: discoveryInjected,
+  }, PluginDiscoveryPage))
   ctx.effect(
-    () => () => { ctx.layout.closePrimaryPage(PAGE_ID) },
-    'ui-plugin-center: close selected page on teardown',
+    () => () => {
+      ctx.layout.closePrimaryPage(PLUGIN_CENTER_PAGE_ID)
+      ctx.layout.closePrimaryPage(PLUGIN_DISCOVERY_PAGE_ID)
+    },
+    'ui-plugin-center: close selected pages on teardown',
   )
 }
