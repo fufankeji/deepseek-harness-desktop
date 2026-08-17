@@ -1,168 +1,90 @@
 <p align="center">
-  <a href="https://www.beyondata.com/">
-    <img src="apps/web/public/dsh-desktop/beyondata-logo.png" alt="赋范空间 Logo" width="92" height="92">
-  </a>
+  <img src="assets/readme-hero.png" alt="DeepSeek Harness Studio 桌面工作台产品概览" width="100%">
 </p>
 
-<h1 align="center">DeepSeek Harness Studio</h1>
+<h1 align="center">DeepSeek Harness，一键启动的桌面增强工作台</h1>
+
+<p align="center"><strong>一键启动，支持 Windows 与 macOS；内置插件发现、热点插件推送、一键安装与管理、AI 智能推荐和视觉增强。</strong></p>
+
+<p align="center">把原本分散在命令行、插件目录和多个页面里的动作，接进同一套桌面工作流。</p>
 
 <p align="center">
   <a href="https://github.com/fufankeji/deepseek-harness-studio/stargazers"><img src="https://img.shields.io/github/stars/fufankeji/deepseek-harness-studio?style=flat&logo=github&label=Stars" alt="GitHub Stars"></a>
-  <img src="https://img.shields.io/badge/Desktop-App-2563EB" alt="Desktop App">
-  <img src="https://img.shields.io/badge/Electron-Desktop-47848F?logo=electron&logoColor=white" alt="Electron Desktop">
+  <img src="https://img.shields.io/badge/Desktop-Electron-47848F?logo=electron&logoColor=white" alt="Electron Desktop">
   <img src="https://img.shields.io/badge/Plugin%20Center-online-22C55E" alt="公开插件中心已上线">
   <img src="https://img.shields.io/badge/Preset%20Square-online-6366F1" alt="Preset 广场已上线">
-  <img src="https://img.shields.io/badge/Vision-Qwen3.8-7C3AED" alt="Qwen3.8 视觉增强">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/fufankeji/deepseek-harness-studio?color=22C55E" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/macOS%20%7C%20Windows-supported-3B82F6" alt="macOS and Windows">
-</p>
-
-<p align="center"><a href="https://www.beyondata.com/"><strong>官方网站</strong></a> · <strong>中文</strong> · <a href="README.en.md">English</a></p>
-
-<p align="center"><strong>赋范空间出品 · DeepSeek Harness 的零代码桌面增强</strong></p>
-
-<p align="center"><strong>视觉增强 + 插件商店 · 0 代码一键安装、启用和使用</strong></p>
-
-<p align="center">自动发现并推送生态新插件，AI 智能推荐值得安装的能力；无需命令行即可完成搜索、校验、安装、启停与卸载。</p>
-
-<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases"><strong>下载 macOS arm64 开发预览版</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.7/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe"><strong>下载 Windows x64 开发预览版</strong></a></p>
-
-<p align="center">
-  <img src="assets/plugin-discovery-hero.jpg" alt="DeepSeek Harness Studio 视觉增强、插件商店、零代码一键启用、插件自动推送与 AI 智能推荐" width="100%">
 </p>
 
 <p align="center">
-  <strong>点击快速查看功能演示</strong>
+  <a href="https://github.com/fufankeji/deepseek-harness-studio/releases"><strong>下载 macOS arm64 开发预览</strong></a>
+  ·
+  <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.7/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe"><strong>下载 Windows x64 开发预览</strong></a>
 </p>
 
-https://github.com/user-attachments/assets/0717f7c7-a872-4d2b-acc2-3a1c4874c732
+<p align="center"><a href="https://www.beyondata.com/">官方网站</a> · <strong>中文</strong> · <a href="README.en.md">English</a></p>
 
-## 先看功能：当前能力与近期路线图
+> **当前状态：** Windows x64 与 macOS arm64 均为开发预览，不代表正式稳定版本。桌面安装包只通过本仓库的 GitHub Releases 发布。
 
-> 状态说明：✅ 已支持；🗓️ 规划中。桌面开发工作区、公开插件中心、Preset 广场和中文 DeepSeek 控制已经可用；规划能力会在真实功能可运行后更新状态。
+## 先看真实界面，再决定要不要下载
 
-| 能力 | 状态 | 可以做什么 |
+下面是当前桌面端的真实功能演示。先看工作区、插件入口和实际交互，再继续了解每项能力。
+
+<p align="center">
+  <img src="assets/plugin-discovery-hero.jpg" alt="DeepSeek Harness Studio 插件发现与桌面工作流概览" width="100%">
+</p>
+
+[查看功能演示视频](https://github.com/user-attachments/assets/0717f7c7-a872-4d2b-acc2-3a1c4874c732)
+
+## 找插件、看理由、装上、管理，一条链路走完
+
+插件真正费时间的，往往不是点击安装，而是先去哪里找、该选哪个、装前要核对什么、装完又在哪里管理。DeepSeek Harness Studio 把这些动作接进桌面端，同时保留安装与高权限操作所需的用户确认。
+
+<p align="center">
+  <img src="assets/feature-plugin-discovery.webp" alt="插件发现功能海报：精选、最近更新、生态热门与搜索分类结合真实界面" width="100%">
+</p>
+
+插件发现页集中呈现精选、最近更新和生态热门，也支持按名称、功能或作者搜索，并通过分类快速筛选。
+
+<p align="center">
+  <img src="assets/feature-ai-recommendation.webp" alt="AI 插件推荐功能海报：用户描述目标，Agent 查询公开目录并给出候选和理由" width="100%">
+</p>
+
+直接描述目标，Agent 会只读查询公开 `dsh-plugin` 目录，返回相关候选和匹配理由。推荐结果不等于兼容确认，安装仍由插件中心完成。
+
+<p align="center">
+  <img src="assets/feature-install-manage.webp" alt="DeepSeek Harness Studio 插件目录、安装按钮和已安装区域" width="100%">
+</p>
+
+插件中心覆盖热门发现、确认安装与已安装管理；可启用、停用、更新或卸载。卸载默认保留配置和数据，需要清理时再单独确认。
+
+## 一个 Preset，装下整套工作方式
+
+<p align="center">
+  <img src="assets/feature-preset-square.webp" alt="Preset 广场功能海报：六套工作流、前置条件、一键安装与用于新会话结合真实界面" width="100%">
+</p>
+
+Preset 把角色、工作规则、Skills 与工具组合成一套可复用的工作方式。当前内置 AI WebApp、PPT Office、视频生成、内容工厂、AI 报表和飞书数字员工六套工作流。
+
+> **使用路径：** 发现 Preset → 查看组成与前置条件 → 安装 → 用于新会话。
+
+当前内置六套赋范官方工作流：
+
+| Preset | 可以交付什么 | 前提与边界 |
 | --- | --- | --- |
-| **插件发现与热门推荐** | ✅ | 自动读取公开目录，按精选、最近更新、生态热门和使用场景呈现值得关注的插件，并支持按名称、功能或作者搜索。 |
-| **公开插件中心** | ✅ | 查看确定版本、能力、权限、兼容性与风险，一键在线安装，并集中管理插件的启用、停用、更新和卸载。 |
-| **Preset 广场与内置工作流** | ✅ | 浏览赋范官方与社区 Agent Preset，查看能力组成后完成一键安装，并从“已安装”直接用于新会话；当前内置六套真实场景工作流。 |
-| **桌面开发工作区** | ✅ | 在本地打开项目、管理会话与工作区，调用 Harness 的模型、工具、Skills 和插件能力，并直接修改完整源码。 |
-| **视觉增强** | ✅ | 为 DeepSeek 文本工作流补齐图像理解：读取对话附件和工作区图片，再把可追溯的识别结果交给 Agent。 |
-| **中文 DeepSeek 控制** | ✅ | 使用中文权限选项和适配 DeepSeek 的思考模式，在输入区直接完成会话级选择。 |
-| **内置皮肤与自由换肤** | ✅ | 默认使用“大肥鱼拟人”皮肤，可切换“官方原版”或“云端猫咪”，也可选择本地图片并自动适配界面配色。 |
-| **独立 MCP、Skills 与工具管理** | 🗓️ | 后续提供不依赖 Bundle 包装的 MCP Server、Skills 与工具发现和连接管理，按项目自由组合 Agent 能力。 |
-| **自定义 Agent 与多 Agent 协作** | 🗓️ | 在现有 Preset 安装和使用能力之上，自定义 Agent 与子 Agent，把编码、测试、调研和审查任务交给不同角色协同完成。 |
-| **任务规划、后台运行与会话恢复** | 🗓️ | 管理计划和待办，让长任务在后台继续运行，并随时查看进度或接续历史会话。 |
-| **项目规则、Hooks 与长期记忆** | 🗓️ | 集中管理项目指令、自动化 Hooks 和可持续复用的上下文，让 Agent 按仓库规则稳定工作。 |
-| **Git、Worktree 与代码审查** | 🗓️ | 在隔离工作区并行开发，查看 Diff、提交和审查结果，减少多人或多任务互相干扰。 |
-| **浏览器与桌面自动化** | 🗓️ | 让 Agent 操作网页和本地应用，并通过真实交互结果验证任务是否完成。 |
-| **手机远程与消息通道** | 🗓️ | 从移动端查看和接续任务，并通过常用消息渠道接收通知或触发 Agent。 |
+| **AI WebApp** | 从需求澄清、规格整理到 TDD 验收的可运行 Web 产品 | 包含 1 个 Preset 与 3 个 Skills |
+| **PPT Office** | 8 页、四主题、可离线播放的单文件 HTML 演示文稿 | 当前不生成 `.pptx` |
+| **视频生成** | 从事实调研、分镜和视频源码到 16:9 MP4 | 运行环境需要 FFmpeg 与 ffprobe |
+| **内容工厂** | 把长文拆成 1–10 张风格一致的系列图文卡片 | 真实生图前需要本机 Codex CLI 已登录并具备 ImageGen 能力 |
+| **AI 报表** | 从本地 Excel 生成可核验的离线交互报告 | 原始 Excel 保持只读，报告只嵌入聚合数据 |
+| **飞书数字员工** | 把自然语言指令转成真实飞书任务并返回双端回执 | 首次使用需要配置飞书应用凭据与默认负责人 |
 
-## 项目简介
+> “赋范官方”表示由赋范桌面端开发团队内置和维护，不代表 DeepSeek Harness 官方。用户 Preset 可以删除并重新安装。
 
-DeepSeek Harness Studio 使用 Electron 承载 DeepSeek Harness 的 Web 工作区，并由桌面主进程启动和管理本地 `dsh web` 服务。这个仓库提供完整源码开发环境，使用者可以从 GitHub 克隆或下载代码，在本地安装依赖、编辑源码、启动桌面应用并继续开发。
+<details>
+<summary><strong>查看六套工作流的真实案例图</strong></summary>
 
-桌面安装包只通过本仓库的 GitHub Releases 发布，不使用第三方下载站。目前已经提供经过真实 Electron 验收的 macOS arm64 预览 ZIP 和 Windows x64 预览安装程序；需要继续开发时，仍可获取完整源码并在本地启动。
-
-## 核心功能
-
-- **Electron 桌面端**：提供应用窗口、系统托盘、单实例运行、外部链接处理和安全的 preload 通信接口。
-- **本地 Harness Host**：桌面主进程启动 `dsh web`，等待本地服务就绪，并在应用退出时关闭 Host 进程。
-- **Web 工作区**：保留 DeepSeek Harness 的会话、工作区、模型、工具、Skills 和插件运行能力。
-- **插件发现与推荐**：自动读取在线目录，通过精选、最近更新、生态热门、场景分类和搜索，帮助用户快速找到值得尝试的插件。
-- **Agent 智能找插件**：用一句自然语言描述需求，Agent 自动检索公开 `dsh-plugin` 目录、筛选相关候选并说明推荐理由。
-- **公开插件中心**：在线搜索 npm 公共 `dsh-plugin` 生态，在安装前校验确定版本、产物完整性、Bundle 声明和本机兼容性，并在已安装区域管理启用、停用与卸载。
-- **Preset 广场**：从独立一级页面浏览赋范官方与社区 Agent Preset，查看 Skill、工具和环境要求后安全安装，并从已安装列表直接用于新会话。
-- **对话区视觉增强**：一键启用百炼 Qwen3.8 图像理解，支持截图、照片、图表、OCR 和工作区图片，不替换当前 DeepSeek 主模型。
-- **桌面外观设置**：内置“官方原版”“大肥鱼拟人”和“云端猫咪”三套外观，也支持本地背景图片、主体焦点和界面玻璃层调节。
-- **完整开发源码**：仓库同时包含桌面应用、Web 界面、CLI、功能包、原生辅助模块、Python SDK、示例和构建脚本。
-
-## 插件生态：先发现值得装的，再完成安装与管理
-
-### 插件发现：不知道装什么，就从这里开始
-
-不知道插件去哪里找、哪些最近刚更新、哪些正在受到生态关注？从左侧进入 **插件发现**，应用会自动读取在线目录，把分散的插件整理成可以直接浏览和行动的推荐页面。
-
-<p align="center">
-  <img src="assets/plugin-discovery-desktop.png" alt="DeepSeek Harness Studio 插件发现真实桌面界面" width="100%">
-  <br><sub>真实 Desktop 界面：目录精选、最近更新、生态热门、场景分类、搜索以及安装与管理入口。</sub>
-</p>
-
-- **每天都有新发现**：打开页面即可看到目录精选、最近更新和生态热门，不必逐个仓库搜索。
-- **按场景快速筛选**：覆盖 Agent 与工作流、Web UI、浏览器与搜索、视觉与媒体、记忆与上下文、模型与服务、开发工具、集成与通知。
-- **直接搜索答案**：按插件名称、功能关键词或作者检索，并查看头像、简介、版本和更新时间。
-- **发现后立即使用**：未安装插件可直接进入安全安装流程；已安装插件可一键转到插件中心继续管理。
-
-### 不知道准确包名？让 Agent 先替你筛选
-
-只知道“想要一个桌面宠物”这类需求时，不必先猜 npm 包名。在 **插件发现** 中输入自然语言描述，应用会把它作为 `/find-plugins` 请求交给当前 Agent；Agent 加载内置技能、只读查询公开 `dsh-plugin` 目录，并把最相关的候选、版本、作者、更新时间和匹配理由返回当前对话。
-
-<p align="center">
-  <img src="assets/plugin-agent-finder-desktop.webp" alt="Agent 在真实桌面客户端中执行 find-plugins，搜索桌面宠物并返回五项插件推荐" width="100%">
-  <br><sub>真实 Desktop 验收：对话发出“找一个桌面宠物插件”，Agent 加载 <code>find-plugins</code>、执行公开目录搜索，并从 8 个结果中列出 5 个相关候选。</sub>
-</p>
-
-- **不要求记住关键词**：直接说明目标、使用场景或希望解决的问题。
-- **推荐依据可核对**：结果包含精确包名、版本、发布者、更新时间和逐项匹配理由。
-- **搜索与安装分开确认**：推荐结果只代表公开目录元数据；选定包名后仍通过 **插件中心** 完成兼容性检查和确认安装。
-
-### 插件中心：在线安装、启停与移除
-
-<p align="center">
-  <img src="assets/plugin-center-avatars-desktop.png" alt="DeepSeek Harness Studio 公开插件中心真实界面" width="100%">
-  <br><sub>真实 Desktop 界面：插件头像、公开目录、已安装区域、“安装”按钮与三点管理入口。</sub>
-</p>
-
-选定插件后进入 **插件中心**，即可查看 npm 公共 Registry 中带 `dsh-plugin` 标签、并符合 DeepSeek Harness Bundle 规范的插件与 Skill Pack，完成从确认风险到运行验证的完整管理流程。
-
-- **在线发现**：搜索公开插件，查看版本、能力、权限、兼容性和风险说明。
-- **一键安装**：下载确定版本并校验包身份、完整性和 Bundle 声明；确认后自动安装并重启 Harness Host 验证运行状态。
-- **已安装管理**：集中查看系统、公开目录和本地来源，通过三点菜单启用、停用、更新或卸载插件。
-- **安全移除**：卸载默认保留配置与插件数据；需要清理数据时，再由用户单独确认。
-
-## Preset 广场已上线：一键安装完整工作方式
-
-插件通常解决“让 Agent 多一个工具”，Skill 解决“教 Agent 按什么方法做”，而 **Agent Preset** 解决的是更完整的问题：把角色、工作规则、Skills、Plugin/MCP 与 Harness 标准工具组合成一套可以反复使用的工作方式。用户不需要逐项理解和手工配置，安装一个 Preset 后，就能直接用对应角色创建新会话。
-
-| 能力层 | 它是什么 | 主要解决什么 |
-| --- | --- | --- |
-| **Skill** | 可复用的方法、步骤与约束 | 告诉 Agent 一类任务应该“怎么做” |
-| **Plugin / MCP** | 可执行工具或外部服务连接 | 让 Agent 能真实读写系统、调用服务并完成动作 |
-| **Agent Preset** | 角色、Skill、工具与运行规则的组合 | 把零散能力装配成一套开箱即用的数字员工或工作流 |
-
-当前源码已经提供与“插件中心”“插件发现”平级的 **Preset 广场**，并完成发现、详情、安全安装、已安装管理、用于新会话、删除与重新安装的桌面端闭环。
-
-<p align="center">
-  <img src="assets/presets/preset-square-desktop.png" alt="DeepSeek Harness Studio Preset 广场真实桌面界面，展示六套赋范官方内置工作流" width="100%">
-  <br><sub>真实 Desktop 界面：Preset 广场、赋范官方内置目录、搜索与排序，以及安装、查看详情和用于新会话入口。</sub>
-</p>
-
-> **使用路径：** 发现 Preset → 查看能力组成与前置条件 → 一键安装 → 在“已安装”中选择“用于新会话” → 按工作流完成任务 → 随时删除或重新安装。
-
-1. 从左侧导航进入 **Preset 广场**，可搜索用途、名称或作者，并按下载量或更新时间排序。
-2. 打开详情查看它包含的角色、Skill、工具、外部依赖和来源说明。
-3. 点击安装后，Desktop 会校验来源、大小、摘要和归档路径，再写入本地用户 Preset 目录。
-4. 安装完成后无需重启 Host；在 **已安装** 中点击“用于新会话”，即可带着对应 Preset 开始任务。
-5. 用户 Preset 可删除并重新安装；系统 Preset 继续受保护。安装或删除后仍停留在当前页面，不打断浏览过程。
-
-> 安装、删除和用于新会话涉及本机文件与 Host，只在 Desktop 中执行；浏览器开发模式用于快速查看和验收界面，不会修改本机 Preset。
-
-## 赋范官方内置 Preset：六套真实场景工作流
-
-首批内置内容不是“六个插件合集”，而是六套围绕真实交付结果组织的 **Agent Preset + Skills + 工具集成**。合计包含 **6 套 Agent Preset、8 个 Skills、1 个图像生成 Plugin**；飞书数字员工另外接入飞书 MCP 与时间解析 MCP，PPT Office 使用内置动效运行适配器。
-
-> **命名说明：** “赋范官方”表示由赋范桌面端开发团队内置和维护，不代表 DeepSeek Harness 官方。它们安装后仍是普通用户 Preset，可以删除并重新安装。
-
-| 分类 | 内置 Preset | 能力组成 | 直接交付 |
-| --- | --- | --- | --- |
-| 产品与应用开发 | AI WebApp | 1 Preset + 3 Skills | 从需求澄清、规格整理到 TDD 验收的可运行 Web 产品 |
-| 办公与演示 | PPT Office | 1 Preset + 1 Skill + 动效运行适配器 | 8 页、四主题、可交互的单文件 HTML 演示文稿 |
-| 视觉与媒体 | 视频生成 | 1 Preset + 1 Skill | 从一句话调研、分镜到渲染完成的 16:9 MP4 |
-| 内容生产 | 内容工厂 | 1 Preset + 1 Skill + 1 图像生成 Plugin | 从长文分析到 1–10 张风格一致的图文卡片 |
-| 数据分析 | AI 报表 | 1 Preset + 1 Skill | 从本地 Excel 生成可核验的离线交互报告 |
-| 企业协同 | 飞书数字员工 | 1 Preset + 1 Skill + 飞书 MCP + 时间解析 MCP | 从自然语言指令到真实飞书任务与双端回执 |
-
-### 产品与演示：把想法变成可交付成果
+<br>
 
 <table>
   <tr>
@@ -170,171 +92,142 @@ DeepSeek Harness Studio 使用 Electron 承载 DeepSeek Harness 的 Web 工作�
     <td width="50%" align="center"><img src="assets/presets/ppt-office.png" alt="PPT Office Preset 生成的动效 HTML 演示文稿"></td>
   </tr>
   <tr>
-    <td valign="top">
-      <strong>01 · AI WebApp</strong><br>
-      <strong>解决什么：</strong>需求讨论结束后，仍不知道如何稳定落成一个可运行、可测试的 Web 产品。<br>
-      <strong>功能逻辑：</strong>需求澄清 → 规格整理 → TDD 纵向开发 → 类型检查、构建与浏览器验收。<br>
-      <strong>能力组成：</strong><code>grill-me</code>、<code>to-spec</code>、<code>tdd</code> 3 个 Skills + 专属产品开发 Preset。<br>
-      <strong>示例结果：</strong>可启动、可拖拽、可更新数据的“创作指挥舱”WebApp。
-    </td>
-    <td valign="top">
-      <strong>02 · PPT Office</strong><br>
-      <strong>解决什么：</strong>只有主题和内容大纲时，快速形成结构完整、视觉统一、可离线播放的演示成果。<br>
-      <strong>功能逻辑：</strong>保存原始内容 → 组织 8 页叙事大纲 → 选择主题并生成 → 确定性检查页数、动画与离线性。<br>
-      <strong>能力组成：</strong>1 个动效演示 Skill + 专属导演 Preset + 内置动效运行适配器。<br>
-      <strong>示例结果：</strong>四套主题、逐页语义动画的单文件 HTML；当前明确不生成 <code>.pptx</code>。
-    </td>
+    <td align="center"><strong>AI WebApp</strong></td>
+    <td align="center"><strong>PPT Office</strong></td>
   </tr>
 </table>
-
-### 内容与媒体：把一句话或一篇长文变成成品
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="assets/presets/video-generation.jpg" alt="视频生成 Preset 完成的 DeepSeek Harness 产品发布片分镜联系表"></td>
-    <td width="50%" align="center"><img src="assets/presets/content-factory.jpg" alt="内容工厂 Preset 生成的九张系列图文卡片"></td>
+    <td width="50%" align="center"><img src="assets/presets/video-generation.jpg" alt="视频生成 Preset 完成的产品发布片分镜联系表"></td>
+    <td width="50%" align="center"><img src="assets/presets/content-factory.jpg" alt="内容工厂 Preset 生成的系列图文卡片"></td>
   </tr>
   <tr>
-    <td valign="top">
-      <strong>03 · 视频生成</strong><br>
-      <strong>解决什么：</strong>只有一句产品想法时，仍能建立从事实调研到正式成片的完整生产链。<br>
-      <strong>功能逻辑：</strong>四维 Web 检索 → 研究与简报 → 设计规范、分镜和视频源码 → HyperFrames 检查 → FFmpeg 渲染与媒体验收。<br>
-      <strong>能力组成：</strong>1 个产品发布片 Skill + 专属视频导演 Preset。<br>
-      <strong>示例结果：</strong>可编辑视频工程、联系表和 16:9 MP4；运行环境需要 FFmpeg 与 ffprobe。
-    </td>
-    <td valign="top">
-      <strong>04 · 内容工厂</strong><br>
-      <strong>解决什么：</strong>把一篇长文稳定拆解成风格统一、可以连续发布的系列视觉内容。<br>
-      <strong>功能逻辑：</strong>分析受众与观点 → 确认风格、布局和配色 → 编写系列大纲与逐图提示 → 生成 1–10 张图片 → 校验尺寸、页数与一致性。<br>
-      <strong>能力组成：</strong>1 个图文 Skill + 专属内容视觉 Preset + Codex ImageGen Bridge Plugin。<br>
-      <strong>示例结果：</strong>9 张连续图文卡片；真实生图前需要本机 Codex CLI 已登录并具备 ImageGen 能力。
-    </td>
+    <td align="center"><strong>视频生成</strong></td>
+    <td align="center"><strong>内容工厂</strong></td>
   </tr>
 </table>
-
-### 数据与企业协同：从本地数据到真实业务动作
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="assets/presets/ai-report.png" alt="AI 报表 Preset 从 Excel 生成的 Epoch AI 模型趋势交互报告"></td>
-    <td width="50%" align="center"><img src="assets/presets/feishu-digital-employee.png" alt="飞书数字员工从 Harness 指令、MCP 调用、飞书回执到任务落地的四步闭环"></td>
+    <td width="50%" align="center"><img src="assets/presets/ai-report.png" alt="AI 报表 Preset 从 Excel 生成的离线交互报告"></td>
+    <td width="50%" align="center"><img src="assets/presets/feishu-digital-employee.png" alt="飞书数字员工把 Harness 指令转成真实飞书任务"></td>
   </tr>
   <tr>
-    <td valign="top">
-      <strong>05 · AI 报表</strong><br>
-      <strong>解决什么：</strong>把本地 Excel 从“原始表格”转成结构清晰、可追溯、可直接交付的数据叙事。<br>
-      <strong>功能逻辑：</strong>只读核对工作簿与数据基线 → 清洗聚合 → 选择图表叙事 → 内联 ECharts 生成 → 桌面与移动双端验收。<br>
-      <strong>能力组成：</strong>1 个 Excel 报表 Skill + 专属数据分析 Preset。<br>
-      <strong>示例结果：</strong>不依赖 CDN 的单文件交互 HTML，原始 Excel 保持只读，报告只嵌入聚合数据。
-    </td>
-    <td valign="top">
-      <strong>06 · 飞书数字员工</strong><br>
-      <strong>解决什么：</strong>让对话不止返回文字，而是把一句自然语言真正变成企业协作系统中的任务。<br>
-      <strong>功能逻辑：</strong>Harness Desktop 或飞书接收指令 → Skill 判断动作 → 时间 MCP 解析“明天下午 6 点” → 飞书官方 MCP 创建任务 → Harness 与飞书双端返回回执。<br>
-      <strong>能力组成：</strong>1 个飞书 Skill + 专属数字员工 Preset + 飞书 MCP + 时间解析 MCP。<br>
-      <strong>示例结果：</strong>真实飞书任务、负责人和截止时间均可查看；首次使用需要配置飞书应用凭据与默认负责人。
-    </td>
+    <td align="center"><strong>AI 报表</strong></td>
+    <td align="center"><strong>飞书数字员工</strong></td>
   </tr>
 </table>
 
-以上图片均来自六套工作流的真实案例成果。Desktop 随安装包交付的是运行所需的精简 Preset、Skills 与工具适配，不会把案例源码、输入数据、截图或生成成品塞进用户环境。
+这些图片来自六套工作流的真实案例成果。Desktop 安装包只交付运行所需的精简 Preset、Skills 与工具适配，不会把案例源码、输入数据、截图或生成成品写入用户环境。
 
-## 内置皮肤与自由换肤
+</details>
 
-进入 **设置 → 背景** 即可切换内置皮肤；选择自定义图片时，应用会在本机完成 1920×1080 WebP 裁切与界面配色，不上传原图。
+<details>
+<summary><strong>查看 Preset 安装与运行边界</strong></summary>
 
-<table>
-  <tr>
-    <td width="50%" align="center"><img src="assets/theme-whale-maid-ui.png" alt="大肥鱼拟人默认皮肤"></td>
-    <td width="50%" align="center"><img src="assets/theme-cloud-cat-ui.png" alt="云端猫咪皮肤"></td>
-  </tr>
-  <tr>
-    <td><strong>大肥鱼拟人 · 默认</strong><br>蓝白鲸灵助手与明亮宫殿，中央留白适配对话区。</td>
-    <td><strong>云端猫咪</strong><br>保留原有柔和蓝白猫咪主题，清爽、安静、低干扰。</td>
-  </tr>
-</table>
+- 打开详情可以查看角色、Skill、工具、外部依赖和来源说明。
+- 安装时，Desktop 会校验来源、大小、摘要和归档路径，再写入本地用户 Preset 目录。
+- 安装完成后无需重启 Host，可从“已安装”直接用于新会话。
+- 安装、删除和用于新会话涉及本机文件与 Host，只在 Desktop 中执行；浏览器开发模式不会修改本机 Preset。
 
-## 中文权限与 DeepSeek 模型控制
+</details>
 
-- **权限选择**：输入区使用 `只读`、`工作区写入` 和 `完全访问` 三档中文权限，作用于当前会话；通用设置只决定后续新会话的默认权限，启用完全访问前必须确认风险。
-- **模型与思考模式**：模型和 API Key 仍在设置页统一管理；输入区可查看当前 DeepSeek 模型，并选择 `关闭思考`、`深度思考` 或 `最大思考`，不显示 DeepSeek 不支持的速度档位。
+## 桌面端不只管理插件
 
-## 视觉增强：让 DeepSeek 看懂图片
+<p align="center">
+  <img src="assets/feature-vision-enhancement.webp" alt="DeepSeek Harness Studio 对话输入区中的视觉增强入口" width="100%">
+</p>
 
-当前桌面端使用的 DeepSeek 文本模型无法直接理解图片。开启视觉增强后，内置的百炼 `qwen3.8-max` 会先读取对话中的图片附件或工作区内的 PNG、JPEG、WebP、GIF 文件，再把识别结果作为可追溯的视觉观察提供给 Agent，原有 DeepSeek 模型、权限和会话流程保持不变。
+百炼 `qwen3.8-max` 先读取对话附件或工作区图片，再把可追溯的视觉观察交给当前 Agent。支持截图、照片、图表和 OCR，不替换 DeepSeek 主模型，也不改变原有权限与会话流程。
 
-- **随手可用**：输入框左侧提供“视觉增强”快捷开关，悬浮即可查看用途和当前状态。
-- **真实验证后开启**：首次启用需要使用一张真实图片验证百炼 API Key；凭证只保存在本机受保护的凭证文件中。
-- **覆盖开发场景**：可理解产品截图、报错界面、设计稿、数据图表、照片和图片文字，也可以按路径读取当前工作区图片。
+### 权限和思考模式，直接在中文输入区里选
+
+当前会话可以选择三档中文权限：
+
+- `只读`：查看信息，不写入工作区。
+- `工作区写入`：允许 Agent 修改当前工作区。
+- `完全访问`：开放更高权限，启用前需要再次确认风险。
+
+模型与 API Key 仍在设置页统一管理。输入区会显示当前 DeepSeek 模型，并提供 `关闭思考`、`深度思考` 和 `最大思考` 三种模式，不显示 DeepSeek 不支持的速度档位。
+
+通用设置只决定新会话的默认权限；当前会话仍以输入区选择为准。
+
+### 工作台不必只剩一种灰
+
+<p align="center">
+  <img src="assets/feature-desktop-themes.webp" alt="大肥鱼拟人与云端猫咪两套主题的真实界面对比" width="100%">
+</p>
+
+内置“官方原版”“大肥鱼拟人”和“云端猫咪”三套外观，也支持选择本地图片。自定义图片在本机完成裁切和界面配色适配，不上传原图。
+
+<p align="center">
+  <img src="assets/readme-tutorial-banner.png" alt="DSH 教程及大模型开发免费实战项目跟练入口" width="100%">
+</p>
+
+<p align="center"><strong>扫码获取完整、详细的 DSH 教程及更多大模型开发免费实战项目跟练。</strong></p>
+
+<p align="center">手机扫码，进入学习入口</p>
 
 ## 下载桌面端
 
-> GitHub Releases 已提供经过真实 Electron 验收的 macOS Apple Silicon 预览 ZIP 和 Windows x64 预览安装程序，运行桌面端无需另行安装 Node.js 或 pnpm。当前均为开发预览资产；正式版本仍将提供完成平台签名的 macOS `.dmg` 和 Windows x64 `.exe`。
+GitHub Releases 已提供经过真实 Electron 验收的 macOS Apple Silicon 预览 ZIP 和 Windows x64 预览安装程序。运行桌面端不需要另行安装 Node.js 或 pnpm。
 
-<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases"><strong>下载 macOS arm64 预览版</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.7/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe"><strong>下载 Windows x64 安装程序</strong></a></p>
+<p align="center">
+  <a href="https://github.com/fufankeji/deepseek-harness-studio/releases"><strong>下载 macOS arm64 开发预览</strong></a>
+  ·
+  <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.7/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe"><strong>下载 Windows x64 开发预览</strong></a>
+</p>
 
-### macOS arm64
+> macOS arm64 与 Windows x64 当前均为开发预览资产。开发预览使用独立 Pre-release 标签，不触发正式安装器发布。
 
-下载并解压预览 ZIP 后，建议先把 `DeepSeek Harness.app` 拖入“应用程序”目录。由于当前预览包尚未经过 Apple 公证，首次打开前需要在“终端”执行：
+<details>
+<summary><strong>macOS arm64 首次打开</strong></summary>
+
+下载并解压预览 ZIP 后，建议先把 `DeepSeek Harness.app` 拖入“应用程序”目录。由于当前预览包尚未经过 Apple 公证，首次打开前需要在终端执行：
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness.app"
 open "/Applications/DeepSeek Harness.app"
 ```
 
-如果应用没有放在“应用程序”目录，请把命令中的路径替换为实际路径。该命令只应用于从本仓库 GitHub Releases 下载并核验过 SHA-256 的预览包；不要用于来源不明的应用。首次成功打开后，可以像普通应用一样从 Finder 或程序坞启动。
+如果应用不在“应用程序”目录，请把命令中的路径替换为实际路径。该命令只应用于从本仓库 GitHub Releases 下载并核验过 SHA-256 的预览包，不要用于来源不明的应用。
 
-### Windows x64
+</details>
 
-下载 `DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe` 后直接运行安装程序。Release 的公开下载区只保留 macOS ZIP 和 Windows 安装程序；校验文件、blockmap 与平台验收记录保留在对应 GitHub Actions 构建中，避免普通用户误下载开发文件。
+<details>
+<summary><strong>Windows x64 安装说明</strong></summary>
 
-开发预览版使用独立 Pre-release 标签，不触发正式安装器发布。正式流程只接受与 Desktop 版本完全一致的 `desktop-v*` 标签；macOS 与 Windows 安装包分别完成平台签名验证后，GitHub 才会同时公开安装文件和 `SHA256SUMS`。
+下载 `DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.7-Setup.exe` 后直接运行安装程序。
 
-## 快速开始
+Release 的公开下载区只保留 macOS ZIP 和 Windows 安装程序；校验文件、blockmap 与平台验收记录保留在对应 GitHub Actions 构建中，避免普通用户误下载开发文件。
 
-### 获取源码
+</details>
 
-使用 Git 克隆仓库：
+## 如果你要继续开发，完整源码也在这里
 
-```sh
-git clone https://github.com/fufankeji/deepseek-harness-studio.git
-cd deepseek-harness-studio
-```
+DeepSeek Harness Studio 使用 Electron 承载 DeepSeek Harness 的 Web 工作区。桌面主进程负责启动本地 `dsh web`、等待 Host 就绪，并在应用退出时关闭对应进程。
 
-也可以在 GitHub 仓库页面选择 **Code → Download ZIP**，下载并解压源码后进入项目目录。
+仓库同时包含桌面应用、Web 界面、CLI、功能包、原生辅助模块、Python SDK、示例和构建脚本。
 
-### 环境要求
+### 从源码启动
+
+环境要求：
 
 - Node.js `^22.19.0 || >=24.0.0`
 - pnpm `11.7.0`
 
-### 外部服务准备
-
-下载源码、安装依赖和启动桌面开发环境不需要预先填写 API 密钥。需要在应用中实际调用模型时，再在设置中配置所选模型服务与凭证；凭证不要提交到 Git。
-
-<a id="run"></a><a id="run-from-source"></a>
-
-### 安装与启动
-
-安装工作区依赖：
-
 ```sh
+git clone https://github.com/fufankeji/deepseek-harness-studio.git
+cd deepseek-harness-studio
 pnpm install
-```
-
-构建所需模块并启动桌面开发环境：
-
-```sh
 pnpm run dev:desktop
 ```
 
-开发启动器会在相关源码或构建输入变化时重新构建；需要强制完整重建时运行：
+下载源码、安装依赖和启动桌面开发环境不需要预先填写 API Key。实际调用模型时，再在设置中配置所选模型服务与凭证；凭证不要提交到 Git。
 
-```sh
-pnpm run dev:desktop:rebuild
-```
-
-## 目录结构
+<details>
+<summary><strong>目录结构</strong></summary>
 
 ```text
 deepseek-harness-studio/
@@ -352,7 +245,10 @@ deepseek-harness-studio/
 └── assets/            # README 使用的项目图片
 ```
 
-## 常用开发命令
+</details>
+
+<details>
+<summary><strong>常用开发命令</strong></summary>
 
 | 命令 | 用途 |
 | --- | --- |
@@ -363,17 +259,48 @@ deepseek-harness-studio/
 | `pnpm run typecheck` | 运行 TypeScript 类型检查 |
 | `pnpm run test` | 运行 Vitest 单元测试 |
 
-## 建议阅读顺序
+</details>
 
-1. `apps/desktop/src/main.ts`：桌面应用入口、窗口、托盘和本地 Host 组合。
+<details>
+<summary><strong>建议阅读顺序</strong></summary>
+
+1. `apps/desktop/src/main.ts`：桌面入口、窗口、托盘与本地 Host 组合。
 2. `apps/desktop/src/host-supervisor.ts`：`dsh web` 的启动、就绪检测与退出管理。
-3. `apps/desktop/src/preload.ts`：Renderer 可访问的固定桌面接口。
+3. `apps/desktop/src/preload.ts`：Renderer 可以访问的固定桌面接口。
 4. `apps/web/`：桌面窗口加载的 Web 工作区。
-5. `apps/cli/` 与 `packages/`：CLI 组合以及各项 Harness 能力实现。
+5. `apps/cli/` 与 `packages/`：CLI 组合及 Harness 能力实现。
+
+</details>
+
+## 当前已交付
+
+以下能力已经在当前源码或桌面开发预览中提供：
+
+- Electron 桌面端、本地 Harness Host 与 Web 工作区
+- 插件发现、最近更新、生态热门、场景分类与搜索
+- Agent 自然语言找插件及推荐理由
+- 公开插件中心的一键安装、启用、停用、更新与卸载
+- Preset 广场、六套内置工作流及用于新会话
+- 视觉增强、中文权限和 DeepSeek 思考模式
+- 三套内置外观与本地图片自定义主题
+
+## 路线图：以下仍是规划
+
+下列能力尚未作为当前已交付功能：
+
+- 独立的 MCP、Skills 与工具发现和连接管理
+- 自定义 Agent 与多 Agent 协作
+- 任务规划、后台运行与会话恢复
+- 项目规则、Hooks 与长期记忆
+- Git、Worktree 与代码审查
+- 浏览器与桌面自动化
+- 手机远程与消息通道
+
+规划能力只会在真实功能可以运行并完成验收后更新状态。
 
 ## 与 DeepSeek Harness 的关系
 
-本项目基于 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的 Harness 核心、Cordis 插件体系和 Web 界面继续进行桌面端开发。本仓库维护 Electron 桌面入口、本地 Host 管理、桌面交互与配套开发脚本。
+本项目基于 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的 Harness 核心、Cordis 插件体系和 Web 界面继续开发。本仓库维护 Electron 桌面入口、本地 Host 管理、桌面交互与配套开发脚本。
 
 ## 许可证
 
