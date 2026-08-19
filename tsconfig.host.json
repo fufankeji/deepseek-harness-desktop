@@ -291,6 +291,7 @@
     { "path": "./packages/host/plugin-inventory" },
     { "path": "./packages/host/webserver" },
     { "path": "./packages/client/ui-plugin-center/tsconfig.host.json" },
+    { "path": "./packages/examples/ff-llm-wiki-plugin/tsconfig.host.json" },
     { "path": "./packages/examples/plugin-center-fixture/tsconfig.host.json" },
     { "path": "./packages/examples/plugin-center-skill-fixture" },
     { "path": "./packages/sdk/client" },
