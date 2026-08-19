@@ -37,6 +37,27 @@ export const BUNDLED_APPEARANCE_THEMES = Object.freeze({
     focusY: 50,
     glassStrength: 72,
   }),
+  'jiutian-deep-space': Object.freeze({
+    id: 'jiutian-deep-space',
+    imageUrl: '/dsh-desktop/jiutian-deep-space-compute-observatory.webp',
+    palette: Object.freeze(['#6767c6', '#18283e', '#b6c6df', '#7f8fe3'] as const),
+    focusY: 50,
+    glassStrength: 72,
+  }),
+  'jiutian-quantum-glass': Object.freeze({
+    id: 'jiutian-quantum-glass',
+    imageUrl: '/dsh-desktop/jiutian-quantum-glass-laboratory.webp',
+    palette: Object.freeze(['#4f8fc1', '#2d4358', '#d6e7f4', '#83a9d4'] as const),
+    focusY: 50,
+    glassStrength: 72,
+  }),
+  'jiutian-dawn-horizon': Object.freeze({
+    id: 'jiutian-dawn-horizon',
+    imageUrl: '/dsh-desktop/jiutian-dawn-compute-horizon.webp',
+    palette: Object.freeze(['#4f90bd', '#46566a', '#dce7f1', '#c8a968'] as const),
+    focusY: 50,
+    glassStrength: 72,
+  }),
 }) satisfies Readonly<Record<BuiltinAppearanceTheme, BundledAppearanceTheme>>
 
 /**

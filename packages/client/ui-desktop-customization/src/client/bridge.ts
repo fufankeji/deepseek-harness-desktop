@@ -17,7 +17,13 @@ export interface DesktopUpdateState {
 export type AppearancePalette = readonly [string, string, string, string]
 
 /** Stable identifiers for themes bundled with the Desktop frontend. */
-export type BuiltinAppearanceTheme = 'official' | 'whale-maid' | 'cloud-cat'
+export type BuiltinAppearanceTheme =
+  | 'official'
+  | 'whale-maid'
+  | 'cloud-cat'
+  | 'jiutian-deep-space'
+  | 'jiutian-quantum-glass'
+  | 'jiutian-dawn-horizon'
 
 /** Renderer-safe persisted appearance values. */
 export interface AppearanceSettings {

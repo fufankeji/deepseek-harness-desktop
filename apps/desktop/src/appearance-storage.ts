@@ -47,7 +47,14 @@ function builtinTheme(value: unknown, image: string | null): DesktopBuiltinAppea
     if (image === null) throw new Error('custom desktop appearance must contain a WebP image')
     return null
   }
-  if (value !== 'official' && value !== 'whale-maid' && value !== 'cloud-cat') {
+  if (
+    value !== 'official'
+    && value !== 'whale-maid'
+    && value !== 'cloud-cat'
+    && value !== 'jiutian-deep-space'
+    && value !== 'jiutian-quantum-glass'
+    && value !== 'jiutian-dawn-horizon'
+  ) {
     throw new Error('desktop bundled theme is not supported')
   }
   if (image !== null) throw new Error('bundled desktop appearance must not contain a custom image')

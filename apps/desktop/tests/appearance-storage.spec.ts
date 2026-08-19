@@ -64,6 +64,15 @@ describe('desktop appearance storage', () => {
     expect(DEFAULT_APPEARANCE.builtinTheme).toBe('whale-maid')
   })
 
+  it('accepts every Jiutian bundled theme without a custom image', () => {
+    for (const theme of ['jiutian-deep-space', 'jiutian-quantum-glass', 'jiutian-dawn-horizon'] as const) {
+      expect(parseAppearance({ ...DEFAULT_APPEARANCE, builtinTheme: theme })).toMatchObject({
+        builtinTheme: theme,
+        imageDataUrl: null,
+      })
+    }
+  })
+
   it('removes the custom document on reset', async () => {
     const fixture = await storage()
     await fixture.storage.save(DEFAULT_APPEARANCE)

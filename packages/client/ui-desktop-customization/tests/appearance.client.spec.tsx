@@ -91,4 +91,30 @@ describe('Desktop appearance themes', () => {
 
     dispose()
   })
+
+  it('renders and persists the Jiutian light themes', async () => {
+    const fixture = bench()
+    const dispose = fixture.controller.start()
+    render(<AppearanceSection controller={fixture.controller} />)
+    await act(async () => {})
+
+    expect(screen.getByRole('button', { name: /九天·量子玻璃实验室/ })).toBeTruthy()
+    const dawn = screen.getByRole('button', { name: /九天·晨曦算力网络/ })
+    fireEvent.click(dawn)
+    fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
+
+    await waitFor(() => {
+      expect(fixture.save).toHaveBeenCalledWith({
+        builtinTheme: 'jiutian-dawn-horizon',
+        imageDataUrl: null,
+        focusY: 50,
+        glassStrength: 72,
+        palette: BUNDLED_APPEARANCE_THEMES['jiutian-dawn-horizon'].palette,
+      })
+    })
+    expect(document.body.style.getPropertyValue('--dsh-desktop-background-image'))
+      .toContain(BUNDLED_APPEARANCE_THEMES['jiutian-dawn-horizon'].imageUrl)
+
+    dispose()
+  })
 })

@@ -34,6 +34,18 @@ const THEME_COPY: Readonly<Record<BuiltinAppearanceTheme, {
     name: '云端猫咪',
     description: '柔和蓝白猫咪背景，清爽、安静、低干扰。',
   }),
+  'jiutian-deep-space': Object.freeze({
+    name: '九天·深空算力穹顶',
+    description: '深空环形算力场，沉稳冷峻，适合深色科技演示。',
+  }),
+  'jiutian-quantum-glass': Object.freeze({
+    name: '九天·量子玻璃实验室',
+    description: '珍珠白与冰蓝玻璃结构，纯净理性、低干扰。',
+  }),
+  'jiutian-dawn-horizon': Object.freeze({
+    name: '九天·晨曦算力网络',
+    description: '象牙白、浅蓝与香槟金光轨，明亮而有发布会气质。',
+  }),
 })
 
 /** Render the background selection, crop focus, glass, save, and reset controls. */
