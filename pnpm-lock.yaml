@@ -369,6 +369,9 @@ importers:
       '@deepseek-ai/cordis-plugin-group':
         specifier: workspace:^
         version: link:../../vendor/group
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../vendor/include
       '@deepseek-ai/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../vendor/loader
@@ -393,6 +396,9 @@ importers:
       fflate:
         specifier: ^0.8.2
         version: 0.8.3
+      js-yaml:
+        specifier: ^4.2.0
+        version: 4.2.0
       semver:
         specifier: 7.8.5
         version: 7.8.5
@@ -418,9 +424,6 @@ importers:
       electron-builder:
         specifier: 26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
-      js-yaml:
-        specifier: ^4.2.0
-        version: 4.2.0
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(oxc-resolver@11.20.0)(publint@0.3.21)(tsx@4.22.4)(typescript@6.0.3)

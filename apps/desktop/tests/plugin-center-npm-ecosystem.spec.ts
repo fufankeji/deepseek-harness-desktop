@@ -435,6 +435,92 @@ describe('npm DSH ecosystem catalog', () => {
     })
   })
 
+  it('does not cache a transient exact-version metadata failure and refreshes the candidate', async () => {
+    const root = await temporaryRoot()
+    const name = '@fixture/dsh-transient'
+    const version = '1.0.0'
+    const integrity = `sha512-${createHash('sha512').update(name).digest('base64')}`
+    let metadataCalls = 0
+    const fetcher: typeof fetch = async (input) => {
+      const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+      if (url.pathname === '/-/v1/search') {
+        return new Response(JSON.stringify({
+          total: 1,
+          objects: [{ package: {
+            name,
+            version,
+            date: '2026-08-16T07:00:00.000Z',
+            publisher: { username: 'fixture' },
+          } }],
+        }), { status: 200 })
+      }
+      metadataCalls += 1
+      if (metadataCalls === 1) throw new Error('transient registry outage')
+      return new Response(JSON.stringify({
+        name,
+        version,
+        dsh: { bundle: { patch: './cordis.patch.yml' } },
+        dist: {
+          tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
+          integrity,
+        },
+      }), { status: 200 })
+    }
+    const repository = new NpmEcosystemCatalogRepository(new CatalogCache(root), fetcher, () => NOW)
+    const query = { ...QUERY, query: 'dsh-transient' }
+
+    await expect(repository.list(query)).resolves.toMatchObject({
+      notice: 'network-unavailable',
+      sections: { featured: [], popular: [], recent: [] },
+    })
+    await expect(repository.refresh(query)).resolves.toMatchObject({
+      source: 'network',
+      freshness: 'fresh',
+      sections: { featured: [expect.objectContaining({ displayName: name, version })] },
+    })
+    expect(metadataCalls).toBe(2)
+  })
+
+  it.each(['manifest', 'packument'] as const)(
+    'does not misreport a transient GitHub %s request as an absent Bundle or unpublished package',
+    async (failure) => {
+      const root = await temporaryRoot()
+      const name = '@fixture/dsh-github-transient'
+      const version = '1.0.0'
+      const fetcher: typeof fetch = async (input) => {
+        const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+        if (url.hostname === 'api.github.com' && url.pathname.endsWith('/github-transient')) {
+          return new Response(JSON.stringify({ default_branch: 'main' }), { status: 200 })
+        }
+        if (url.hostname === 'api.github.com' && url.pathname.includes('/git/trees/')) {
+          return new Response(JSON.stringify({
+            truncated: false,
+            tree: [{ path: 'package.json', type: 'blob', size: 500 }],
+          }), { status: 200 })
+        }
+        if (url.hostname === 'raw.githubusercontent.com') {
+          if (failure === 'manifest') throw new Error('transient GitHub raw outage')
+          return new Response(JSON.stringify({
+            name,
+            version,
+            dsh: { bundle: { patch: './cordis.patch.yml' } },
+          }), { status: 200 })
+        }
+        if (failure === 'packument') throw new Error('transient npm packument outage')
+        throw new Error(`unexpected request ${url.href}`)
+      }
+      const repository = new NpmEcosystemCatalogRepository(new CatalogCache(root), fetcher, () => NOW)
+
+      await expect(repository.list({
+        ...QUERY,
+        query: 'https://github.com/fixture/github-transient',
+      })).resolves.toMatchObject({
+        notice: 'network-unavailable',
+        sections: { featured: [], popular: [], recent: [] },
+      })
+    },
+  )
+
   it.each([
     ['an undeclared module', undefined, 'references undeclared dependency @fixture/dsh-child'],
     ['a non-exact dependency', '^1.0.0', 'dependency @fixture/dsh-child must use an exact version'],

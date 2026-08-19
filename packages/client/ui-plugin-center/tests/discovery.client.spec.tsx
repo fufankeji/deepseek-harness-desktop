@@ -231,4 +231,30 @@ describe('Plugin Discovery page', () => {
     expect(screen.queryByText(zh.installationBlocked)).toBeNull()
     expect(checkCompatibility).not.toHaveBeenCalled()
   })
+
+  it('checks the catalog candidate when a different installed version is managed', async () => {
+    const installed = installedListResult()
+    const items = installed.items.map(item => item.pluginId === 'fixture.workspace-tools'
+      ? { ...item, version: '0.9.0' }
+      : item)
+    const checkCompatibility = vi.fn<PluginDiscoveryPageProps['checkCompatibility']>(
+      async ({ pluginId, version }) => compatibilityDecision({ pluginId, version }),
+    )
+    render(<PluginDiscoveryPage {...props({
+      checkCompatibility,
+      listInstalled: async () => ({ ...installed, items }),
+    })} />)
+
+    const heading = await screen.findByRole('heading', { name: 'Workspace tools' })
+    const opener = heading.closest('button')
+    if (opener === null) throw new Error('Installed plugin detail opener is missing')
+    fireEvent.click(opener)
+
+    expect(await screen.findByText(zh.allowedToInstall)).toBeTruthy()
+    expect(screen.queryByText(zh.installedDetailEnabled)).toBeNull()
+    expect((await screen.findAllByRole('button', { name: zh.discoveryManage })).length).toBeGreaterThan(0)
+    expect(checkCompatibility).toHaveBeenCalledWith({
+      pluginId: 'fixture.workspace-tools', version: '1.0.0', action: 'install',
+    })
+  })
 })

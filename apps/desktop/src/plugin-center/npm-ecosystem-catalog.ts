@@ -472,17 +472,36 @@ async function fetchJson(fetcher: typeof fetch, url: URL, label: string): Promis
   const controller = new AbortController()
   const timeout = setTimeout(() => { controller.abort() }, REQUEST_TIMEOUT_MS)
   try {
-    const response = await fetcher(url, {
-      headers: { accept: 'application/json' },
-      redirect: 'error',
-      signal: controller.signal,
-    })
-    if (!response.ok) throw new Error(`${label} returned HTTP ${String(response.status)}`)
+    let response: Response
+    try {
+      response = await fetcher(url, {
+        headers: { accept: 'application/json' },
+        redirect: 'error',
+        signal: controller.signal,
+      })
+    } catch (error) {
+      throw new CatalogNetworkError(`${label} request failed`, error)
+    }
+    if (response.status === 404) throw new CatalogResourceMissingError(`${label} returned HTTP 404`)
+    if (!response.ok) throw new CatalogNetworkError(`${label} returned HTTP ${String(response.status)}`)
     const declared = Number(response.headers.get('content-length'))
-    if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) throw new Error(`${label} exceeds 2 MiB`)
-    const text = await response.text()
-    if (Buffer.byteLength(text, 'utf8') > MAX_JSON_BYTES) throw new Error(`${label} exceeds 2 MiB`)
-    return JSON.parse(text) as unknown
+    if (Number.isFinite(declared) && declared > MAX_JSON_BYTES) {
+      throw new CatalogNetworkError(`${label} exceeds 2 MiB`)
+    }
+    let text: string
+    try {
+      text = await response.text()
+    } catch (error) {
+      throw new CatalogNetworkError(`${label} response failed`, error)
+    }
+    if (Buffer.byteLength(text, 'utf8') > MAX_JSON_BYTES) {
+      throw new CatalogNetworkError(`${label} exceeds 2 MiB`)
+    }
+    try {
+      return JSON.parse(text) as unknown
+    } catch (error) {
+      throw new CatalogNetworkError(`${label} returned invalid JSON`, error)
+    }
   } finally {
     clearTimeout(timeout)
   }
@@ -741,6 +760,20 @@ class CatalogDiscoveryError extends Error {
   constructor(readonly notice: CatalogListNotice, message: string) {
     super(message)
     this.name = 'CatalogDiscoveryError'
+  }
+}
+
+class CatalogNetworkError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause })
+    this.name = 'CatalogNetworkError'
+  }
+}
+
+class CatalogResourceMissingError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CatalogResourceMissingError'
   }
 }
 
@@ -1031,13 +1064,13 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const key = `${seed.name}@${seed.version}`
     const running = this.referenceLoads.get(key)
     if (running !== undefined) return running
-    const loading = this.decodeReference(seed).then(
-      (reference) => {
-        this.packageReferences.set(`${reference.pluginId}@${reference.version}`, reference)
-        return reference
-      },
-      () => null,
-    )
+    const loading = this.decodeReference(seed).then((reference) => {
+      this.packageReferences.set(`${reference.pluginId}@${reference.version}`, reference)
+      return reference
+    }).catch((error: unknown) => {
+      if (error instanceof CatalogNetworkError) throw error
+      return null
+    }).finally(() => { this.referenceLoads.delete(key) })
     this.referenceLoads.set(key, loading)
     return loading
   }
@@ -1127,7 +1160,8 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
         const dsh = record(manifest['dsh'], 'GitHub package dsh manifest')
         portableBundlePatch(record(dsh['bundle'], 'GitHub package dsh.bundle manifest')['patch'])
         return name
-      } catch {
+      } catch (error) {
+        if (error instanceof CatalogNetworkError) throw error
         return null
       }
     })
@@ -1148,7 +1182,8 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const seeds = await mapConcurrent(names, 4, async (name) => {
       try {
         return await this.fetchExactSeed({ name, version: undefined })
-      } catch {
+      } catch (error) {
+        if (error instanceof CatalogNetworkError) throw error
         return null
       }
     })
@@ -1207,12 +1242,24 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     batchSize: number,
   ): Promise<readonly NpmPackageReference[]> {
     const references: NpmPackageReference[] = []
+    let unavailableCount = 0
     const boundedSeeds = seeds.slice(0, MAX_REFERENCE_HYDRATIONS_PER_QUERY)
     for (let from = 0; from < boundedSeeds.length && references.length < limit; from += batchSize) {
-      const batch = await mapConcurrent(boundedSeeds.slice(from, from + batchSize), 8,
-        seed => this.loadReference(seed))
-      references.push(...batch.filter((value): value is NpmPackageReference =>
-        value !== null && value.summary.catalogKind === kind))
+      const batch = await mapConcurrent(boundedSeeds.slice(from, from + batchSize), 8, async (seed) => {
+        try {
+          return await this.loadReference(seed)
+        } catch (error) {
+          if (error instanceof CatalogNetworkError) return error
+          throw error
+        }
+      })
+      for (const value of batch) {
+        if (value instanceof CatalogNetworkError) unavailableCount += 1
+        else if (value !== null && value.summary.catalogKind === kind) references.push(value)
+      }
+    }
+    if (references.length === 0 && unavailableCount > 0) {
+      throw new CatalogNetworkError('npm exact-version metadata is temporarily unavailable')
     }
     return references.slice(0, limit)
   }

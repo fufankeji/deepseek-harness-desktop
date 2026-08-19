@@ -476,7 +476,7 @@ function DetailDrawer({
     : compatibilityState.status === 'error'
       ? 'error'
       : compatibilityState.result.allowed ? 'allowed' : 'blocked'
-  const installedDetailKey = installedItem === null
+  const installedDetailKey = installedItem === null || installedItem.version !== entry.version
     ? null
     : installedItem.enabled ? 'installedDetailEnabled' : 'installedDetailDisabled'
   return (
@@ -781,7 +781,7 @@ export function PluginDiscoveryPage({
       () => { if (detailRequest.current === request) setDetailState({ status: 'error' }) },
     )
     const installedItem = installedItems.get(`${entry.catalogKind}:${entry.pluginId}`) ?? null
-    if (initialCompatibility !== undefined || installedItem !== null) return
+    if (initialCompatibility !== undefined || installedItem?.version === entry.version) return
     void Promise.resolve().then(() => checkCompatibility({
       pluginId: entry.pluginId,
       version: entry.version,
