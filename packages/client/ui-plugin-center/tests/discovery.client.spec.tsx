@@ -96,6 +96,16 @@ function props(values: Partial<PluginDiscoveryPageProps> = {}): PluginDiscoveryP
 }
 
 describe('Plugin Discovery page', () => {
+  it('shows actionable discovery context from the catalog', async () => {
+    const list = async (query: CatalogListQuery): Promise<CatalogListResult> => ({
+      ...catalogResult(query),
+      notice: 'github-mapped',
+    })
+    render(<PluginDiscoveryPage {...props({ list, refresh: list })} />)
+
+    expect(await screen.findByText(zh.githubMapped)).toBeTruthy()
+  })
+
   it('hands a natural-language requirement to the Agent plugin finder', async () => {
     const findWithAgent = vi.fn<PluginDiscoveryPageProps['findWithAgent']>(async () => 'needs-model')
     render(<PluginDiscoveryPage {...props({ findWithAgent })} />)
@@ -190,5 +200,35 @@ describe('Plugin Discovery page', () => {
     await screen.findByRole('heading', { name: zh.discoveryTitle })
     fireEvent.click(await screen.findByRole('button', { name: zh.discoveryManage }))
     expect(openPluginCenter).toHaveBeenCalledOnce()
+  })
+
+  it('shows installed-disabled status without running a duplicate-install preflight', async () => {
+    const installed = installedListResult()
+    const items = installed.items.map(item => item.pluginId === 'fixture.workspace-tools'
+      ? {
+        ...item,
+        enabled: false,
+        bundleOrder: null,
+        disabledOrder: 0,
+        runtimeStatus: 'inactive' as const,
+        supportedActions: ['enable', 'uninstall'] as const,
+      }
+      : item)
+    const checkCompatibility = vi.fn<PluginDiscoveryPageProps['checkCompatibility']>(
+      async ({ pluginId, version }) => compatibilityDecision({ pluginId, version }),
+    )
+    render(<PluginDiscoveryPage {...props({
+      checkCompatibility,
+      listInstalled: async () => ({ ...installed, items }),
+    })} />)
+
+    const heading = await screen.findByRole('heading', { name: 'Workspace tools' })
+    const opener = heading.closest('button')
+    if (opener === null) throw new Error('Installed plugin detail opener is missing')
+    fireEvent.click(opener)
+
+    expect(await screen.findByText(zh.installedDetailDisabled)).toBeTruthy()
+    expect(screen.queryByText(zh.installationBlocked)).toBeNull()
+    expect(checkCompatibility).not.toHaveBeenCalled()
   })
 })

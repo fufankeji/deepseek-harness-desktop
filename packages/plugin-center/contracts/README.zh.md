@@ -4,6 +4,8 @@
 
 供 Desktop 主进程与插件中心客户端共享的严格 JSON 兼容目录、预检与可信安装操作合同。Skill Pack 只表示为带 `catalogKind: skill-pack` 和 `skill` 能力的已校验确定版本 DSH Bundle；本包不接受渲染器提供的包来源、Git URL、本地路径、可执行文件、环境或版本范围。
 
+一份有界目录结果可以携带闭合的 `notice`，用于区分 GitHub 到 npm 映射成功、仓库只发布了部分包、仅有源码、未发现 DSH Bundle，以及网络失败后的缓存回退。该提示只解释发现上下文，绝不授予制品或变更权威。
+
 Preset 广场使用独立的闭合合同，不扩展插件目录类型。其列表、详情、归档元数据、预览和安装解码器把公开条目与下载 URL 限定在 `https://www.dshdesktop.com/preset/`，拒绝未知字段，并且只把一个有界目标 id 带入本地导入操作。
 
 每个解码后的条目还携带闭合的目录来源：`fufan-official` 或 `community`。来源只控制展示和内置归档解析，绝不会把安装后的用户 Preset 提升为受保护的系统信任。

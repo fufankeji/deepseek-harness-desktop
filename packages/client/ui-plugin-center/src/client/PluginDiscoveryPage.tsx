@@ -140,6 +140,14 @@ const SOURCE_KEYS = {
   cache: 'cacheSource',
 } as const satisfies Record<CatalogListResult['source'], PluginCenterLocaleKey>
 
+const NOTICE_KEYS = {
+  'github-mapped': 'githubMapped',
+  'github-partial': 'githubPartial',
+  'github-source-only': 'githubSourceOnly',
+  'github-no-dsh-bundle': 'githubNoDshBundle',
+  'network-unavailable': 'catalogNetworkUnavailable',
+} as const satisfies Record<NonNullable<CatalogListResult['notice']>, PluginCenterLocaleKey>
+
 function entryKey(entry: CatalogSummary): string {
   return `${entry.pluginId}@${entry.version}`
 }
@@ -468,6 +476,9 @@ function DetailDrawer({
     : compatibilityState.status === 'error'
       ? 'error'
       : compatibilityState.result.allowed ? 'allowed' : 'blocked'
+  const installedDetailKey = installedItem === null
+    ? null
+    : installedItem.enabled ? 'installedDetailEnabled' : 'installedDetailDisabled'
   return (
     <div className={css.drawerBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <aside className={css.drawer} aria-label={`${t('discoveryDetails')}：${entry.displayName}`}>
@@ -499,20 +510,27 @@ function DetailDrawer({
                 </div>
               )}
               <p className={css.drawerDescription}>{detail.description}</p>
-              <section className={`${css.drawerSection} ${css.preflight}`} data-state={compatibilityStatus}>
-                <h3>{t('preflight')}</h3>
-                <p>{compatibilityLabel}</p>
-                {compatibilityState.status !== 'ready' ? null : (
-                  <>
-                    <p>{compatibilityState.result.riskSummary}</p>
-                    {compatibilityState.result.reasons.length === 0 ? null : (
-                      <ul>{compatibilityState.result.reasons.map(reason => (
-                        <li key={`${reason.code}:${reason.subject}`}>{t(compatibilityReasonKey(reason.code))} · {reason.subject}</li>
-                      ))}</ul>
-                    )}
-                  </>
-                )}
-              </section>
+              {installedDetailKey === null ? (
+                <section className={`${css.drawerSection} ${css.preflight}`} data-state={compatibilityStatus}>
+                  <h3>{t('preflight')}</h3>
+                  <p>{compatibilityLabel}</p>
+                  {compatibilityState.status !== 'ready' ? null : (
+                    <>
+                      <p>{compatibilityState.result.riskSummary}</p>
+                      {compatibilityState.result.reasons.length === 0 ? null : (
+                        <ul>{compatibilityState.result.reasons.map(reason => (
+                          <li key={`${reason.code}:${reason.subject}`}>{t(compatibilityReasonKey(reason.code))} · {reason.subject}</li>
+                        ))}</ul>
+                      )}
+                    </>
+                  )}
+                </section>
+              ) : (
+                <section className={`${css.drawerSection} ${css.preflight}`} data-state="allowed">
+                  <h3>{t('installedStatus')}</h3>
+                  <p>{t(installedDetailKey)}</p>
+                </section>
+              )}
               <section className={css.drawerSection}>
                 <h3>{t('information')}</h3>
                 <dl className={css.drawerFacts}>
@@ -762,7 +780,8 @@ export function PluginDiscoveryPage({
       (result) => { if (detailRequest.current === request) setDetailState({ status: 'ready', result }) },
       () => { if (detailRequest.current === request) setDetailState({ status: 'error' }) },
     )
-    if (initialCompatibility !== undefined) return
+    const installedItem = installedItems.get(`${entry.catalogKind}:${entry.pluginId}`) ?? null
+    if (initialCompatibility !== undefined || installedItem !== null) return
     void Promise.resolve().then(() => checkCompatibility({
       pluginId: entry.pluginId,
       version: entry.version,
@@ -950,6 +969,14 @@ export function PluginDiscoveryPage({
             <div className={css.error} role="alert">
               <span>{t('error')}</span>
               <button type="button" onClick={retry}>{t('retry')}</button>
+            </div>
+          ) : null}
+          {ready?.notice !== undefined ? (
+            <div className={css.emptyPanel} role="status">
+              <span>{t(NOTICE_KEYS[ready.notice])}</span>
+              {ready.notice === 'network-unavailable'
+                ? <button type="button" onClick={retry}>{t('retry')}</button>
+                : null}
             </div>
           ) : null}
           {operationRequestFailed ? <p className={css.error} role="alert">{t('operationRequestFailed')}</p> : null}

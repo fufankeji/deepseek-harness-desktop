@@ -1,4 +1,4 @@
-/** Live npm-backed discovery for packages following the official dsh-plugin convention. */
+/** Live npm-backed discovery for published DeepSeek Harness Bundles. */
 
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, rename, rm } from 'node:fs/promises'
@@ -16,6 +16,7 @@ import {
   type CatalogFreshness,
   type CatalogKind,
   type CatalogListQuery,
+  type CatalogListNotice,
   type CatalogListResult,
   type CatalogMedia,
   type CatalogSnapshot,
@@ -24,6 +25,8 @@ import {
   type CatalogVersionPreflight,
   type CompatibilityRequest,
 } from '@deepseek-ai/dsh-plugin-center-contracts'
+import { entryListSchema, type PatchOptions } from '@deepseek-ai/cordis-plugin-include'
+import * as yaml from 'js-yaml'
 import { verifyPluginArtifact } from './artifact-verifier.ts'
 import { CatalogCache } from './catalog-cache.ts'
 import type {
@@ -34,6 +37,8 @@ import type {
 
 const NPM_REGISTRY_ORIGIN = 'https://registry.npmjs.org'
 const NPM_SEARCH_URL = `${NPM_REGISTRY_ORIGIN}/-/v1/search`
+const GITHUB_API_ORIGIN = 'https://api.github.com'
+const GITHUB_RAW_ORIGIN = 'https://raw.githubusercontent.com'
 const MAX_JSON_BYTES = 2 * 1024 * 1024
 const MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 const MAX_UNPACKED_BYTES = 256 * 1024 * 1024
@@ -45,7 +50,11 @@ const DISCOVERY_CACHE_FRESH_MS = 24 * 60 * 60 * 1000
 const MAX_DISCOVERY_CACHE_BYTES = 8 * 1024 * 1024
 const MAX_DISCOVERY_CACHE_REFERENCES = 1_000
 const SEARCH_PAGE_SIZE = 250
+const TEXT_SEARCH_SIZE = 50
+const MAX_GITHUB_TREE_ENTRIES = 2_000
+const MAX_GITHUB_MANIFESTS = 40
 const MAX_SEARCH_INDEX_ENTRIES = 10_000
+const MAX_REFERENCE_HYDRATIONS_PER_QUERY = 96
 const COLD_START_ENTRY_LIMIT = 6
 const COLD_START_BATCH_SIZE = 12
 const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u
@@ -54,6 +63,7 @@ const STABLE_ID = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u
 const SHA512_INTEGRITY = /^sha512-[A-Za-z0-9+/]{86}==$/u
 const BRAND_COLOR = /^#[0-9A-Fa-f]{6}$/u
 const GITHUB_OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/u
+const GITHUB_REPO = /^[A-Za-z0-9._-]{1,100}$/u
 const FALLBACK_BRAND_COLORS = [
   '#2563EB', '#7C3AED', '#DB2777', '#DC2626', '#EA580C', '#0F766E', '#0369A1', '#4F46E5',
 ] as const
@@ -80,6 +90,7 @@ interface NpmPackageReference {
   readonly bundlePatch: string
   readonly hasClient: boolean
   readonly nodeRange: string
+  readonly nodeRangeDeclared: boolean
   readonly tarballUrl: string
   readonly integrity: string
   readonly summary: CatalogSummary
@@ -114,7 +125,7 @@ interface SearchIndexCacheEntry {
 }
 
 interface NpmDiscoveryDocument {
-  readonly schemaVersion: 1
+  readonly schemaVersion: 2
   readonly generatedAt: string
   readonly seeds: readonly NpmSearchSeed[]
   readonly references: readonly NpmPackageReference[]
@@ -281,6 +292,7 @@ function summaryFor(reference: Omit<NpmPackageReference, 'summary'>, values: {
   readonly updatedAt: string
   readonly icon: CatalogMedia | null
   readonly brandColor: string
+  readonly compatibilityReason: string
 }): CatalogSummary {
   const packageCapabilities = capabilities(values.keywords, reference.hasClient)
   return {
@@ -298,7 +310,7 @@ function summaryFor(reference: Omit<NpmPackageReference, 'summary'>, values: {
     brandColor: values.brandColor,
     compatibility: {
       status: 'unknown',
-      reason: '安装前会下载确定版本并完成兼容性与产物校验。',
+      reason: values.compatibilityReason,
       platforms: ['darwin-arm64', 'win32-x64'],
     },
     updatedAt: values.updatedAt,
@@ -347,7 +359,8 @@ function decodeDiscoveryReference(value: unknown, index: number): NpmPackageRefe
   const label = `npm discovery reference ${String(index)}`
   const source = record(value, label)
   exactKeys(source, label, [
-    'pluginId', 'packageName', 'version', 'bundlePatch', 'hasClient', 'nodeRange', 'tarballUrl', 'integrity', 'summary',
+    'pluginId', 'packageName', 'version', 'bundlePatch', 'hasClient', 'nodeRange', 'nodeRangeDeclared',
+    'tarballUrl', 'integrity', 'summary',
   ])
   const decodedPackageName = packageName(source['packageName'])
   const decodedVersion = exactVersion(source['version'])
@@ -359,7 +372,7 @@ function decodeDiscoveryReference(value: unknown, index: number): NpmPackageRefe
   if (pluginId !== npmPluginId(decodedPackageName) || !STABLE_ID.test(pluginId)
     || parsedTarball.protocol !== 'https:' || parsedTarball.origin !== NPM_REGISTRY_ORIGIN
     || !SHA512_INTEGRITY.test(integrity)
-    || typeof source['hasClient'] !== 'boolean'
+    || typeof source['hasClient'] !== 'boolean' || typeof source['nodeRangeDeclared'] !== 'boolean'
     || summary.pluginId !== pluginId || summary.version !== decodedVersion
     || summary.displayName !== decodedPackageName || summary.scope !== 'public'
     || summary.verified || summary.installed || summary.compatibility.status !== 'unknown') {
@@ -372,6 +385,7 @@ function decodeDiscoveryReference(value: unknown, index: number): NpmPackageRefe
     bundlePatch: portableBundlePatch(source['bundlePatch']),
     hasClient: source['hasClient'],
     nodeRange: cachedString(source['nodeRange'], `${label}.nodeRange`, 160),
+    nodeRangeDeclared: source['nodeRangeDeclared'],
     tarballUrl,
     integrity,
     summary,
@@ -381,7 +395,7 @@ function decodeDiscoveryReference(value: unknown, index: number): NpmPackageRefe
 function decodeDiscoveryDocument(value: unknown): NpmDiscoveryDocument {
   const source = record(value, 'npm discovery cache')
   exactKeys(source, 'npm discovery cache', ['schemaVersion', 'generatedAt', 'seeds', 'references'])
-  if (source['schemaVersion'] !== 1) throw new Error('npm discovery cache schema is unsupported')
+  if (source['schemaVersion'] !== 2) throw new Error('npm discovery cache schema is unsupported')
   if (!Array.isArray(source['seeds']) || source['seeds'].length > MAX_SEARCH_INDEX_ENTRIES
     || !Array.isArray(source['references']) || source['references'].length > MAX_DISCOVERY_CACHE_REFERENCES) {
     throw new Error('npm discovery cache exceeds bounds')
@@ -395,7 +409,7 @@ function decodeDiscoveryDocument(value: unknown): NpmDiscoveryDocument {
     throw new Error('npm discovery cache identities are inconsistent')
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: canonicalInstant(source['generatedAt']),
     seeds,
     references,
@@ -406,7 +420,7 @@ class NpmDiscoveryCache {
   private readonly file: string
 
   constructor(userDataDirectory: string) {
-    this.file = join(userDataDirectory, 'plugin-center', 'npm-discovery-v1.json')
+    this.file = join(userDataDirectory, 'plugin-center', 'npm-discovery-v2.json')
   }
 
   async read(): Promise<NpmDiscoveryDocument | undefined> {
@@ -586,20 +600,73 @@ function inspectArchive(bytes: Uint8Array, bundlePatch: string): Promise<Archive
   })
 }
 
-function patchValues(patch: string, key: 'id' | 'name'): readonly string[] {
-  const values = new Set<string>()
-  const expression = key === 'id' ? /^\s*-\s+id:\s+(.+?)\s*$/u : /^\s+name:\s+(.+?)\s*$/u
-  for (const line of patch.split(/\r?\n/u)) {
-    const matched = line.match(expression)?.[1]?.trim()
-    if (matched === undefined) continue
-    const unquoted = ((matched.startsWith("'") && matched.endsWith("'"))
-      || (matched.startsWith('"') && matched.endsWith('"'))) ? matched.slice(1, -1) : matched
-    values.add(unquoted)
-  }
-  return [...values]
+interface BundlePatchEntries {
+  readonly entryIds: readonly string[]
+  readonly moduleNames: readonly string[]
 }
 
-function searchPage(value: unknown): NpmSearchPage {
+function bundlePatchEntries(patch: string): BundlePatchEntries {
+  const entryIds = new Set<string>()
+  const moduleNames = new Set<string>()
+  let decoded: unknown
+  try {
+    decoded = yaml.load(patch, { schema: entryListSchema })
+  } catch (error) {
+    throw new Error(`failed to parse npm Bundle patch: ${String(error)}`)
+  }
+  if (!Array.isArray(decoded)) throw new Error('npm Bundle patch must be a top-level patch list')
+  const patches = decoded.map((value, index) => record(value, `npm Bundle patch ${String(index + 1)}`))
+  const visit = (value: unknown, label: string): void => {
+    const entry = record(value, label)
+    const id = trimmedString(entry['id'], 128)
+    const name = trimmedString(entry['name'], 214)
+    if (id !== undefined) entryIds.add(id)
+    if (name !== undefined) moduleNames.add(name)
+    if (entry['group'] === true && entry['config'] !== undefined) {
+      if (!Array.isArray(entry['config'])) throw new Error(`${label}.config must be an entry list for a group`)
+      entry['config'].forEach((child, index) => { visit(child, `${label}.config[${String(index)}]`) })
+    }
+  }
+  patches.forEach((patchEntry: PatchOptions, patchIndex) => {
+    if (patchEntry.insert === undefined) return
+    if (!Array.isArray(patchEntry.insert)) {
+      throw new Error(`npm Bundle patch ${String(patchIndex + 1)} insert must be an entry list`)
+    }
+    patchEntry.insert.forEach((entry, entryIndex) => {
+      visit(entry, `npm Bundle patch ${String(patchIndex + 1)} insert[${String(entryIndex)}]`)
+    })
+  })
+  return { entryIds: [...entryIds], moduleNames: [...moduleNames] }
+}
+
+function verifyBundleModuleDependencies(
+  manifest: Record<string, unknown>,
+  packageNameValue: string,
+  moduleNames: readonly string[],
+  hostProvidedModules: ReadonlySet<string>,
+): ReadonlyMap<string, string> {
+  const dependencies = {
+    ...(optionalRecord(manifest['dependencies'], 'npm artifact dependencies') ?? {}),
+    ...(optionalRecord(manifest['optionalDependencies'], 'npm artifact optionalDependencies') ?? {}),
+  }
+  const referenced = new Map<string, string>()
+  for (const moduleName of moduleNames) {
+    if (moduleName === packageNameValue) continue
+    if (!PACKAGE_NAME.test(moduleName)) throw new Error(`npm Bundle references invalid module ${moduleName}`)
+    const declared = dependencies[moduleName]
+    if (typeof declared !== 'string') {
+      if (hostProvidedModules.has(moduleName)) continue
+      throw new Error(`npm Bundle references undeclared dependency ${moduleName}`)
+    }
+    if (!EXACT_VERSION.test(declared)) {
+      throw new Error(`npm Bundle dependency ${moduleName} must use an exact version`)
+    }
+    referenced.set(moduleName, declared)
+  }
+  return referenced
+}
+
+function searchPage(value: unknown, requireDshKeyword: boolean): NpmSearchPage {
   const source = record(value, 'npm search response')
   const objects = source['objects']
   if (!Array.isArray(objects) || objects.length > SEARCH_PAGE_SIZE) {
@@ -609,7 +676,7 @@ function searchPage(value: unknown): NpmSearchPage {
   let total: number | undefined
   if (rawTotal !== undefined) {
     if (typeof rawTotal !== 'number' || !Number.isSafeInteger(rawTotal)
-      || rawTotal < objects.length || rawTotal > MAX_SEARCH_INDEX_ENTRIES) {
+      || rawTotal < objects.length || (requireDshKeyword && rawTotal > MAX_SEARCH_INDEX_ENTRIES)) {
       throw new Error('npm search response has invalid total')
     }
     total = rawTotal
@@ -618,7 +685,7 @@ function searchPage(value: unknown): NpmSearchPage {
     try {
       const packageValue = record(record(item, `npm search object ${String(index)}`)['package'], 'npm search package')
       const keywords = stringList(packageValue['keywords'], 64, 80)
-      if (!keywords.includes('dsh-plugin')) return []
+      if (requireDshKeyword && !keywords.includes('dsh-plugin')) return []
       const publisherValue = optionalRecord(packageValue['publisher'], 'npm search publisher')
       return [{
         name: packageName(packageValue['name']),
@@ -640,7 +707,9 @@ function seedMatchRank(seed: NpmSearchSeed, query: string): number | undefined {
   const needle = query.toLocaleLowerCase()
   const name = seed.name.toLocaleLowerCase()
   if (name === needle) return 0
-  if (name.startsWith(needle)) return 1
+  const unscopedName = name.includes('/') ? name.slice(name.lastIndexOf('/') + 1) : name
+  if (unscopedName === needle) return 0
+  if (name.startsWith(needle) || unscopedName.startsWith(needle)) return 1
   if (name.includes(needle)) return 2
   const keywords = seed.keywords.map(keyword => keyword.toLocaleLowerCase())
   if (keywords.includes(needle)) return 3
@@ -648,6 +717,58 @@ function seedMatchRank(seed: NpmSearchSeed, query: string): number | undefined {
   if (seed.description.toLocaleLowerCase().includes(needle)) return 5
   if (keywords.some(keyword => keyword.includes(needle))) return 6
   return undefined
+}
+
+function mergeSeeds(...groups: readonly (readonly NpmSearchSeed[])[]): readonly NpmSearchSeed[] {
+  const unique = new Map<string, NpmSearchSeed>()
+  for (const group of groups) {
+    for (const seed of group) unique.set(`${seed.name}@${seed.version}`, seed)
+  }
+  return [...unique.values()].slice(-MAX_SEARCH_INDEX_ENTRIES)
+}
+
+interface ExactPackageSpecifier {
+  readonly name: string
+  readonly version: string | undefined
+}
+
+interface GitHubRepository {
+  readonly owner: string
+  readonly repo: string
+}
+
+class CatalogDiscoveryError extends Error {
+  constructor(readonly notice: CatalogListNotice, message: string) {
+    super(message)
+    this.name = 'CatalogDiscoveryError'
+  }
+}
+
+function githubRepository(query: string): GitHubRepository | undefined {
+  let parsed: URL
+  try {
+    parsed = new URL(query)
+  } catch {
+    return undefined
+  }
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'github.com' || parsed.username !== ''
+    || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') return undefined
+  const segments = parsed.pathname.split('/').filter(Boolean)
+  if (segments.length !== 2) return undefined
+  const [owner, rawRepo] = segments
+  if (owner === undefined || rawRepo === undefined) return undefined
+  const repo = rawRepo.replace(/\.git$/u, '')
+  return GITHUB_OWNER.test(owner) && GITHUB_REPO.test(repo) ? { owner, repo } : undefined
+}
+
+function exactPackageSpecifier(query: string): ExactPackageSpecifier | undefined {
+  if (query === '') return undefined
+  if (PACKAGE_NAME.test(query)) return query.startsWith('@') ? { name: query, version: undefined } : undefined
+  const separator = query.lastIndexOf('@')
+  if (separator <= 0) return undefined
+  const name = query.slice(0, separator)
+  const version = query.slice(separator + 1)
+  return PACKAGE_NAME.test(name) && EXACT_VERSION.test(version) ? { name, version } : undefined
 }
 
 function matchingSeeds(seeds: readonly NpmSearchSeed[], query: string, kind: CatalogKind): readonly NpmSearchSeed[] {
@@ -737,7 +858,7 @@ function createSnapshot(entries: readonly AuthorityEntry[], generatedAt: string)
   })
 }
 
-/** Search npm's public dsh-plugin index and publish only exact validated DSH Bundles. */
+/** Discover published Bundles from bounded npm/GitHub signals and retain exact validated authority. */
 export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
   private authorityState: AuthorityState | undefined
   private authorityLoading: Promise<AuthorityState> | undefined
@@ -760,6 +881,7 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     private readonly fetcher: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
     discoveryDirectory?: string,
+    private readonly hostProvidedModules: ReadonlySet<string> = new Set(),
   ) {
     this.discoveryCache = discoveryDirectory === undefined ? undefined : new NpmDiscoveryCache(discoveryDirectory)
   }
@@ -801,16 +923,14 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
 
   private async persistDiscovery(seeds: readonly NpmSearchSeed[], generatedAt: string): Promise<void> {
     const previous = await this.currentDiscovery()
-    const previousWins = previous !== null && (previous.generatedAt > generatedAt
-      || (previous.generatedAt === generatedAt && previous.seeds.length > seeds.length))
-    const retainedSeeds = previousWins ? previous.seeds : seeds
+    const retainedSeeds = mergeSeeds(previous?.seeds ?? [], seeds)
     const seedIdentities = new Set(retainedSeeds.map(seed => `${seed.name}@${seed.version}`))
     const references = [...this.packageReferences.values()]
       .filter(reference => seedIdentities.has(`${reference.packageName}@${reference.version}`))
       .slice(-MAX_DISCOVERY_CACHE_REFERENCES)
     const document = decodeDiscoveryDocument({
-      schemaVersion: 1,
-      generatedAt: previousWins ? previous.generatedAt : generatedAt,
+      schemaVersion: 2,
+      generatedAt: previous !== null && previous.generatedAt > generatedAt ? previous.generatedAt : generatedAt,
       seeds: retainedSeeds,
       references,
     })
@@ -854,7 +974,6 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const decodedVersion = exactVersion(metadata['version'])
     if (decodedName !== seed.name || decodedVersion !== seed.version) throw new Error('npm exact metadata identity changed')
     const keywords = stringList(metadata['keywords'], 24, 48)
-    if (!keywords.includes('dsh-plugin')) throw new Error('npm exact version is not tagged dsh-plugin')
     const dsh = record(metadata['dsh'], 'npm dsh manifest')
     const bundle = record(dsh['bundle'], 'npm dsh.bundle manifest')
     const pluginCenter = optionalRecord(dsh['pluginCenter'], 'npm dsh.pluginCenter manifest')
@@ -873,7 +992,8 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const description = trimmedString(metadata['description'], 280) ?? `DeepSeek Harness Bundle ${decodedName}`
     const publisher = authorName(metadata, seed.publisher)
     const engines = optionalRecord(metadata['engines'], 'npm engines')
-    const nodeRange = trimmedString(engines?.['node'], 160) ?? '>=22.19 <25'
+    const declaredNodeRange = trimmedString(engines?.['node'], 160)
+    const nodeRange = declaredNodeRange ?? '>=22.19 <25'
     const base = {
       pluginId: npmPluginId(decodedName),
       packageName: decodedName,
@@ -881,6 +1001,7 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
       bundlePatch,
       hasClient: client !== undefined,
       nodeRange,
+      nodeRangeDeclared: declaredNodeRange !== undefined,
       tarballUrl,
       integrity,
     } as const
@@ -894,6 +1015,9 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
           updatedAt: seed.updatedAt,
           icon: catalogIcon(pluginCenter, metadata, publisher),
           brandColor: catalogBrandColor(pluginCenter, decodedName),
+          compatibilityReason: declaredNodeRange === undefined
+            ? '发布者未声明 Node.js 兼容范围；安装前会校验 Studio 运行时与制品，安装后仍须运行验证。'
+            : '安装前会按发布者声明的 Node.js 范围完成兼容性与产物校验。',
         }),
         catalogKind: catalogKind(keywords, dsh),
       },
@@ -918,21 +1042,133 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     return loading
   }
 
-  private async fetchSearchPage(from: number): Promise<NpmSearchPage> {
+  private async fetchKeywordSearchPage(from: number): Promise<NpmSearchPage> {
     const url = new URL(NPM_SEARCH_URL)
     url.searchParams.set('text', 'keywords:dsh-plugin')
     url.searchParams.set('size', String(SEARCH_PAGE_SIZE))
     url.searchParams.set('from', String(from))
-    return searchPage(await fetchJson(this.fetcher, url, 'npm dsh-plugin search'))
+    return searchPage(await fetchJson(this.fetcher, url, 'npm dsh-plugin search'), true)
+  }
+
+  private async fetchTextSearchPage(query: string): Promise<NpmSearchPage> {
+    const url = new URL(NPM_SEARCH_URL)
+    url.searchParams.set('text', query)
+    url.searchParams.set('size', String(TEXT_SEARCH_SIZE))
+    url.searchParams.set('from', '0')
+    return searchPage(await fetchJson(this.fetcher, url, 'npm bounded text search'), false)
+  }
+
+  private async fetchExactSeed(specifier: ExactPackageSpecifier): Promise<NpmSearchSeed> {
+    const url = new URL(`${NPM_REGISTRY_ORIGIN}/${encodeURIComponent(specifier.name)}`)
+    const packument = record(await fetchJson(this.fetcher, url, `${specifier.name} packument`), 'npm packument')
+    const name = packageName(packument['name'])
+    if (name !== specifier.name) throw new Error('npm latest metadata identity changed')
+    const versions = record(packument['versions'], 'npm packument versions')
+    const distTags = record(packument['dist-tags'], 'npm packument dist-tags')
+    const version = exactVersion(specifier.version ?? distTags['latest'])
+    const metadata = record(versions[version], 'npm packument exact version')
+    if (packageName(metadata['name']) !== name || exactVersion(metadata['version']) !== version) {
+      throw new Error('npm packument exact version identity changed')
+    }
+    const times = record(packument['time'], 'npm packument publication times')
+    const publisher = authorName(metadata, authorName(packument, 'npm publisher'))
+    return {
+      name,
+      version,
+      updatedAt: canonicalInstant(times[version]),
+      publisher,
+      description: trimmedString(metadata['description'], 280) ?? '',
+      keywords: stringList(metadata['keywords'], 64, 80),
+    }
+  }
+
+  private async fetchGitHubPackageNames(repository: GitHubRepository): Promise<readonly string[]> {
+    const repositoryUrl = new URL(
+      `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}`,
+    )
+    const repositoryMetadata = record(
+      await fetchJson(this.fetcher, repositoryUrl, 'GitHub repository metadata'),
+      'GitHub repository metadata',
+    )
+    const defaultBranch = trimmedString(repositoryMetadata['default_branch'], 200)
+    if (defaultBranch === undefined) throw new Error('GitHub repository has no valid default branch')
+    const treeUrl = new URL(
+      `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}`
+      + `/git/trees/${encodeURIComponent(defaultBranch)}`,
+    )
+    treeUrl.searchParams.set('recursive', '1')
+    const treeMetadata = record(await fetchJson(this.fetcher, treeUrl, 'GitHub repository tree'), 'GitHub tree')
+    if (treeMetadata['truncated'] === true) throw new Error('GitHub repository tree is truncated')
+    const tree = treeMetadata['tree']
+    if (!Array.isArray(tree) || tree.length > MAX_GITHUB_TREE_ENTRIES) {
+      throw new Error('GitHub repository tree exceeds discovery bounds')
+    }
+    const paths = tree.flatMap((item, index) => {
+      try {
+        const entry = record(item, `GitHub tree entry ${String(index)}`)
+        const path = trimmedString(entry['path'], 512)
+        if (entry['type'] !== 'blob' || path === undefined || !/(?:^|\/)package\.json$/u.test(path)) return []
+        if (path.split('/').length > 5) return []
+        return [path]
+      } catch {
+        return []
+      }
+    }).slice(0, MAX_GITHUB_MANIFESTS)
+    const names = await mapConcurrent(paths, 4, async (path) => {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/')
+      const rawUrl = new URL(
+        `${GITHUB_RAW_ORIGIN}/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}`
+        + `/${encodeURIComponent(defaultBranch)}/${encodedPath}`,
+      )
+      try {
+        const manifest = record(await fetchJson(this.fetcher, rawUrl, `GitHub manifest ${path}`), 'GitHub package manifest')
+        if (manifest['private'] === true) return null
+        const name = packageName(manifest['name'])
+        const dsh = record(manifest['dsh'], 'GitHub package dsh manifest')
+        portableBundlePatch(record(dsh['bundle'], 'GitHub package dsh.bundle manifest')['patch'])
+        return name
+      } catch {
+        return null
+      }
+    })
+    return [...new Set(names.filter((name): name is string => name !== null))]
+  }
+
+  private async fetchGitHubSeeds(repository: GitHubRepository): Promise<{
+    readonly seeds: readonly NpmSearchSeed[]
+    readonly sourceOnlyCount: number
+  }> {
+    const names = await this.fetchGitHubPackageNames(repository)
+    if (names.length === 0) {
+      throw new CatalogDiscoveryError(
+        'github-no-dsh-bundle',
+        'GitHub repository does not contain a bounded public DSH Bundle manifest',
+      )
+    }
+    const seeds = await mapConcurrent(names, 4, async (name) => {
+      try {
+        return await this.fetchExactSeed({ name, version: undefined })
+      } catch {
+        return null
+      }
+    })
+    const published = seeds.filter((seed): seed is NpmSearchSeed => seed !== null)
+    if (published.length === 0) {
+      throw new CatalogDiscoveryError(
+        'github-source-only',
+        'GitHub DSH Bundle source has no published npm version eligible for one-click installation',
+      )
+    }
+    return { seeds: published, sourceOnlyCount: names.length - published.length }
   }
 
   private async fetchSearchIndex(): Promise<readonly NpmSearchSeed[]> {
-    const first = await this.fetchSearchPage(0)
+    const first = await this.fetchKeywordSearchPage(0)
     const pages: NpmSearchPage[] = [first]
     if (first.objectCount === SEARCH_PAGE_SIZE) {
       if (first.total === undefined) {
         for (let from = SEARCH_PAGE_SIZE; from < MAX_SEARCH_INDEX_ENTRIES; from += SEARCH_PAGE_SIZE) {
-          const page = await this.fetchSearchPage(from)
+          const page = await this.fetchKeywordSearchPage(from)
           pages.push(page)
           if (page.objectCount < SEARCH_PAGE_SIZE) break
         }
@@ -941,7 +1177,7 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
           { length: Math.ceil(first.total / SEARCH_PAGE_SIZE) - 1 },
           (_, index) => (index + 1) * SEARCH_PAGE_SIZE,
         )
-        pages.push(...await mapConcurrent(offsets, 4, from => this.fetchSearchPage(from)))
+        pages.push(...await mapConcurrent(offsets, 4, from => this.fetchKeywordSearchPage(from)))
       }
     }
     const unique = new Map<string, NpmSearchSeed>()
@@ -971,8 +1207,9 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     batchSize: number,
   ): Promise<readonly NpmPackageReference[]> {
     const references: NpmPackageReference[] = []
-    for (let from = 0; from < seeds.length && references.length < limit; from += batchSize) {
-      const batch = await mapConcurrent(seeds.slice(from, from + batchSize), 8,
+    const boundedSeeds = seeds.slice(0, MAX_REFERENCE_HYDRATIONS_PER_QUERY)
+    for (let from = 0; from < boundedSeeds.length && references.length < limit; from += batchSize) {
+      const batch = await mapConcurrent(boundedSeeds.slice(from, from + batchSize), 8,
         seed => this.loadReference(seed))
       references.push(...batch.filter((value): value is NpmPackageReference =>
         value !== null && value.summary.catalogKind === kind))
@@ -986,9 +1223,10 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     limit: number,
     batchSize: number,
     generatedAt: string,
+    matchQuery = query.query.trim(),
   ): Promise<CatalogListResult> {
     const searchQuery = query.query.trim()
-    const matched = matchingSeeds(seeds, searchQuery, query.catalogKind)
+    const matched = matchingSeeds(seeds, matchQuery, query.catalogKind)
     const references = await this.referencesFor(matched, query.catalogKind, limit, batchSize)
     const authority = await this.currentAuthority()
     const verified = new Map(authority.snapshot.entries.map(entry => [
@@ -1010,7 +1248,30 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
   }
 
   private async searchNetwork(query: CatalogListQuery, forceIndex = false): Promise<CatalogListResult> {
-    const seeds = await this.searchIndex(forceIndex)
+    const searchQuery = query.query.trim()
+    const repository = githubRepository(searchQuery)
+    const exact = exactPackageSpecifier(searchQuery)
+    let seeds: readonly NpmSearchSeed[]
+    let matchQuery = searchQuery
+    let notice: CatalogListNotice | undefined
+    if (repository !== undefined) {
+      const github = await this.fetchGitHubSeeds(repository)
+      seeds = github.seeds
+      matchQuery = ''
+      notice = github.sourceOnlyCount === 0 ? 'github-mapped' : 'github-partial'
+    } else if (exact !== undefined) {
+      seeds = [await this.fetchExactSeed(exact)]
+      matchQuery = exact.name
+    } else if (searchQuery !== '') {
+      const document = await this.currentDiscovery()
+      const [textPage, keywordSeeds] = await Promise.all([
+        this.fetchTextSearchPage(searchQuery),
+        document === null ? this.searchIndex(forceIndex) : Promise.resolve(document.seeds),
+      ])
+      seeds = mergeSeeds(document?.seeds ?? [], keywordSeeds, textPage.seeds)
+    } else {
+      seeds = await this.searchIndex(forceIndex)
+    }
     const generatedAt = new Date(this.now()).toISOString()
     const result = await this.resultForSeeds(
       query,
@@ -1018,13 +1279,14 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
       query.limit,
       Math.min(SEARCH_PAGE_SIZE, Math.max(query.limit * 2, 24)),
       generatedAt,
+      matchQuery,
     )
     await this.persistDiscovery(seeds, generatedAt).catch(() => {})
-    return result
+    return notice === undefined ? result : { ...result, notice }
   }
 
   private async coldStartNetwork(query: CatalogListQuery): Promise<CatalogListResult> {
-    const first = await this.fetchSearchPage(0)
+    const first = await this.fetchKeywordSearchPage(0)
     const generatedAt = new Date(this.now()).toISOString()
     const result = await this.resultForSeeds(
       query,
@@ -1082,7 +1344,13 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const key = JSON.stringify(query)
     const running = this.networkSearches.get(key)
     if (running !== undefined) return running
-    const search = this.searchNetwork(query, forceIndex).catch(() => this.recoverList(query)).then((result) => {
+    const search = this.searchNetwork(query, forceIndex).catch(async (error: unknown) => {
+      const recovered = await this.recoverList(query)
+      return {
+        ...recovered,
+        notice: error instanceof CatalogDiscoveryError ? error.notice : 'network-unavailable' as const,
+      }
+    }).then((result) => {
       this.searchCache.set(key, { expiresAt: this.now() + SEARCH_CACHE_MS, result })
       return result
     }).finally(() => { this.networkSearches.delete(key) })
@@ -1091,6 +1359,7 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
   }
 
   private async listUncached(query: CatalogListQuery): Promise<CatalogListResult> {
+    if (query.query.trim() !== '') return await this.networkSearch(query, false)
     const document = await this.currentDiscovery()
     if (document !== null) {
       const cached = await this.cachedDiscoveryResult(query, document)
@@ -1120,7 +1389,7 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
 
   async refresh(query: CatalogListQuery): Promise<CatalogListResult> {
     if (query.scope === 'local') return await this.fallback(query)
-    return await this.networkSearch(query, true)
+    return await this.networkSearch(query, query.query.trim() === '')
   }
 
   private async hydrate(reference: NpmPackageReference): Promise<AuthorityEntry> {
@@ -1131,7 +1400,17 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     if (retained !== undefined) return retained
     const running = this.hydrations.get(key)
     if (running !== undefined) return await running
-    const hydration = this.createAuthority(reference).finally(() => { this.hydrations.delete(key) })
+    const hydration = this.decodeReference({
+      name: reference.packageName,
+      version: reference.version,
+      updatedAt: reference.summary.updatedAt,
+      publisher: reference.summary.publisher,
+      description: reference.summary.summary,
+      keywords: reference.summary.keywords,
+    }).then((currentReference) => {
+      this.packageReferences.set(key, currentReference)
+      return this.createAuthority(currentReference)
+    }).finally(() => { this.hydrations.delete(key) })
     this.hydrations.set(key, hydration)
     return await hydration
   }
@@ -1148,14 +1427,35 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
     const dsh = record(inspection.manifest['dsh'], 'npm artifact dsh manifest')
     const bundle = record(dsh['bundle'], 'npm artifact dsh.bundle manifest')
     if (bundle['patch'] !== reference.bundlePatch) throw new Error('npm tarball Bundle declaration changed')
-    const entryIds = patchValues(inspection.patch, 'id')
+    const patchEntries = bundlePatchEntries(inspection.patch)
+    const entryIds = patchEntries.entryIds
     if (entryIds.length === 0 || entryIds.some(entryId => !STABLE_ID.test(entryId))) {
       throw new Error('npm Bundle has no stable Loader entry evidence')
     }
-    const moduleNames = patchValues(inspection.patch, 'name')
+    const moduleNames = patchEntries.moduleNames
+    const moduleDependencies = verifyBundleModuleDependencies(
+      inspection.manifest,
+      reference.packageName,
+      moduleNames,
+      this.hostProvidedModules,
+    )
     const client = optionalRecord(dsh['client'], 'npm artifact dsh.client manifest')
     if ((client !== undefined) !== reference.hasClient) throw new Error('npm tarball client declaration changed')
-    const expectedClientModules = reference.hasClient ? [reference.packageName] : []
+    const dependencyClientModules = await mapConcurrent([...moduleDependencies], 8, async ([name, version]) => {
+      const url = new URL(`${NPM_REGISTRY_ORIGIN}/${encodeURIComponent(name)}/${encodeURIComponent(version)}`)
+      const metadata = record(await fetchJson(this.fetcher, url, `${name}@${version}`), 'npm dependency metadata')
+      if (packageName(metadata['name']) !== name || exactVersion(metadata['version']) !== version) {
+        throw new Error(`npm dependency metadata identity changed for ${name}`)
+      }
+      const dependencyDsh = optionalRecord(metadata['dsh'], 'npm dependency dsh manifest')
+      return optionalRecord(dependencyDsh?.['client'], 'npm dependency dsh.client manifest') === undefined
+        ? null
+        : name
+    })
+    const expectedClientModules = [
+      ...(reference.hasClient ? [reference.packageName] : []),
+      ...dependencyClientModules.filter((name): name is string => name !== null),
+    ]
     if (expectedClientModules.some(moduleName => !moduleNames.includes(moduleName))) {
       throw new Error('npm Bundle does not mount its declared client module')
     }
@@ -1169,7 +1469,9 @@ export class NpmEcosystemCatalogRepository implements PluginCatalogRepository {
       verified: true,
       compatibility: {
         ...reference.summary.compatibility,
-        reason: '确定版本的 npm 完整性、包身份与 Bundle 激活声明已校验；安装前仍会核对本机环境。',
+        reason: reference.nodeRangeDeclared
+          ? '确定版本的 npm 完整性、包身份、Bundle 激活声明与发布者 Node.js 范围已校验；安装前仍会核对本机环境。'
+          : '确定版本的 npm 完整性、包身份与 Bundle 激活声明已校验；发布者未声明 Node.js 范围，安装后仍须运行验证。',
       },
     }
     const riskSummary = '这是社区发布的 DSH Bundle，产物身份已经校验，但代码未经过 DeepSeek 官方安全审计，运行时拥有应用进程权限。'

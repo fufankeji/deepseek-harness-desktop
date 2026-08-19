@@ -63,7 +63,7 @@ Desktop installers are published only through this repository's GitHub Releases 
 - **Web workspace**: DeepSeek Harness sessions, workspaces, models, tools, Skills, and plugin runtime remain available.
 - **Plugin Discovery and recommendations**: read the online catalog and use featured, recently updated, ecosystem-popular, scenario filters, and search to find plugins worth trying.
 - **Agent-assisted plugin search**: describe a need in natural language and let the Agent search the public `dsh-plugin` catalog, rank relevant candidates, and explain each recommendation.
-- **Public Plugin Center**: search the public npm `dsh-plugin` ecosystem, verify the exact version, artifact integrity, Bundle declaration, and local compatibility before installation, then enable, disable, or uninstall entries from the Installed view.
+- **Public Plugin Center**: locate published DSH Bundles by short package name, full npm name, or an explicit GitHub repository; verify exact identity, artifact integrity, Bundle declaration, and local compatibility before installation. Aggregate Bundles may reuse DSH modules packaged with the current Desktop Host, while genuinely missing third-party dependencies remain blocked.
 - **Composer vision enhancement**: enable Bailian Qwen3.8 image understanding in one click for screenshots, photos, charts, OCR, and workspace images without replacing the current DeepSeek model.
 - **Desktop appearance settings**: built-in Whale Maid and Cloud Cat skins, plus local backgrounds, subject focus, and interface glass controls.
 - **Complete development source**: desktop app, Web interface, CLI, capability packages, native helpers, Python SDK, examples, and build scripts are kept in the repository.
@@ -104,7 +104,7 @@ When all you know is “I want a desktop pet,” you do not need to guess an npm
   <br><sub>Real Desktop interface: plugin avatars, public catalog, Installed area, Install buttons, and three-dot management actions.</sub>
 </p>
 
-After choosing a plugin, open **Plugin Center** to inspect plugins and Skill Packs in the public npm Registry that carry the `dsh-plugin` keyword and follow the DeepSeek Harness Bundle format, then complete the workflow from risk confirmation through runtime verification.
+After choosing a plugin, open **Plugin Center** and search by short package name, full npm name, or an explicit GitHub repository for plugins and Skill Packs published to the public npm Registry in the DeepSeek Harness Bundle format. The `dsh-plugin` keyword is only a discovery signal, and GitHub is only used to map back to a published npm package; source is never installed directly.
 
 - **Online discovery**: search public plugins and inspect versions, capabilities, permissions, compatibility, and risk.
 - **One-click installation**: download and verify an exact package version, integrity metadata, and Bundle declaration; after confirmation, Desktop installs it, restarts the Harness Host, and verifies runtime state.

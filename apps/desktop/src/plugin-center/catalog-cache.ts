@@ -1,6 +1,6 @@
 /** Owner-only atomic persistence for the last fully decoded catalog snapshot. */
 
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { CatalogContractError, decodeCatalogSnapshot, type CatalogSnapshot } from '@deepseek-ai/dsh-plugin-center-contracts'
@@ -9,9 +9,15 @@ import { CatalogContractError, decodeCatalogSnapshot, type CatalogSnapshot } fro
 export class CatalogCache {
   private readonly file: string
 
-  /** @param userDataDirectory - Electron app.getPath('userData'). */
-  constructor(userDataDirectory: string) {
-    this.file = join(userDataDirectory, 'plugin-center', 'catalog-v1.json')
+  /**
+   * @param userDataDirectory - Electron app.getPath('userData').
+   * @param authorityIdentity - Optional closed-runtime identity that scopes reusable authority.
+   */
+  constructor(userDataDirectory: string, authorityIdentity?: readonly string[]) {
+    const suffix = authorityIdentity === undefined
+      ? ''
+      : `-${createHash('sha256').update(JSON.stringify([...new Set(authorityIdentity)].sort())).digest('hex').slice(0, 24)}`
+    this.file = join(userDataDirectory, 'plugin-center', `catalog-v1${suffix}.json`)
   }
 
   /** Read a complete verified snapshot; corrupt or absent cache has no authority. */

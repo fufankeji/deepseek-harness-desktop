@@ -97,6 +97,14 @@ export interface CatalogListQuery {
   readonly limit: number
 }
 
+/** Actionable context attached to one bounded catalog lookup. */
+export type CatalogListNotice =
+  | 'github-mapped'
+  | 'github-partial'
+  | 'github-source-only'
+  | 'github-no-dsh-bundle'
+  | 'network-unavailable'
+
 /** Renderer intent for one exact detail read. */
 export interface CatalogDetailQuery {
   readonly pluginId: string
@@ -110,6 +118,7 @@ export interface CatalogListResult {
   readonly freshness: CatalogFreshness
   readonly source: CatalogSource
   readonly sections: Readonly<Record<CatalogSection, readonly CatalogSummary[]>>
+  readonly notice?: CatalogListNotice
 }
 
 /** Exact detail returned with the freshness of its owning snapshot. */

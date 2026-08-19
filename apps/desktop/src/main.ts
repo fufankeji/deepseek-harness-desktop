@@ -119,6 +119,7 @@ function hostPaths(): {
   nodeExecutable: string
   cliEntry: string
   cliManifest: string
+  hostManifest: string
   shippedBundleManifests: readonly string[]
   packageManagerEntry: string
   packageManagerManifest: string
@@ -131,6 +132,7 @@ function hostPaths(): {
       nodeExecutable: process.env.DSH_DESKTOP_NODE_EXECUTABLE ?? 'node',
       cliEntry: join(REPOSITORY_ROOT, 'apps/cli/lib/bin.js'),
       cliManifest: join(REPOSITORY_ROOT, 'apps/cli/package.json'),
+      hostManifest: join(DESKTOP_DIR, 'runtime/package.json'),
       shippedBundleManifests: [
         join(REPOSITORY_ROOT, 'packages/bundle/base/package.json'),
         join(REPOSITORY_ROOT, 'packages/bundle/web-app/package.json'),
@@ -147,6 +149,7 @@ function hostPaths(): {
     nodeExecutable: process.execPath,
     cliEntry: join(hostModules, '@deepseek-ai/dsh/lib/bin.js'),
     cliManifest: join(hostModules, '@deepseek-ai/dsh/package.json'),
+    hostManifest: join(process.resourcesPath, 'host/package.json'),
     shippedBundleManifests: [
       join(hostModules, '@deepseek-ai/dsh-base/package.json'),
       join(hostModules, '@deepseek-ai/dsh-web-app/package.json'),
@@ -171,7 +174,12 @@ function assertHostArtifacts(paths: ReturnType<typeof hostPaths>): void {
   if (!existsSync(paths.packageManagerEntry)) {
     throw new Error(`desktop package-manager entry is missing: ${paths.packageManagerEntry}`)
   }
-  for (const manifest of [paths.cliManifest, paths.packageManagerManifest, ...paths.shippedBundleManifests]) {
+  for (const manifest of [
+    paths.cliManifest,
+    paths.hostManifest,
+    paths.packageManagerManifest,
+    ...paths.shippedBundleManifests,
+  ]) {
     if (!existsSync(manifest)) throw new Error(`desktop Host manifest is missing: ${manifest}`)
   }
 }
@@ -271,6 +279,19 @@ function manifestVersion(path: string): string {
   const manifest = JSON.parse(readFileSync(path, 'utf8')) as { version?: unknown }
   if (typeof manifest.version !== 'string') throw new Error(`${path} has no version`)
   return manifest.version
+}
+
+function manifestDependencyNames(path: string): ReadonlySet<string> {
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as { dependencies?: unknown }
+  if (typeof manifest.dependencies !== 'object' || manifest.dependencies === null
+    || Array.isArray(manifest.dependencies)) {
+    throw new Error(`${path} has no dependency map`)
+  }
+  const dependencies = Object.entries(manifest.dependencies)
+  for (const [name, version] of dependencies) {
+    if (name === '' || typeof version !== 'string') throw new Error(`${path} has an invalid dependency map`)
+  }
+  return new Set(dependencies.map(([name]) => name))
 }
 
 /** Load the app-local tray template, with an empty fallback for incomplete staging. */
@@ -376,11 +397,14 @@ async function createMainWindow(): Promise<BrowserWindow> {
 function registerDesktopBridge(): PluginCenterBackend {
   const userDataDirectory = app.getPath('userData')
   const appearance = new AppearanceStorage(userDataDirectory)
+  const paths = hostPaths()
+  const hostProvidedModules = manifestDependencyNames(paths.hostManifest)
   const catalog = new NpmEcosystemCatalogRepository(
-    new CatalogCache(userDataDirectory),
+    new CatalogCache(userDataDirectory, [...hostProvidedModules]),
     fetch,
     Date.now,
     userDataDirectory,
+    hostProvidedModules,
   )
   const presetSquare = new PresetSquareClient(
     fetch,
@@ -388,7 +412,6 @@ function registerDesktopBridge(): PluginCenterBackend {
     currentHostOrigin,
     new ResourcePresetSquareCatalog(bundledPresetRoot()),
   )
-  const paths = hostPaths()
   presetRuntimeController = new PresetRuntimeController({
     homeDirectory: resolveDshHome(),
     nodeExecutable: paths.nodeExecutable,
