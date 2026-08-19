@@ -192,6 +192,7 @@ let compatibilityAllowed: boolean
 let mutationsEnabled: boolean
 let currentOperation: PluginOperation | null
 let operationListeners: Set<(operation: PluginOperation) => void>
+let installedVersion: string | null
 
 function operation(phase: OperationPhase, idempotencyKey = 'install:fixture.workspace-tools:web-replay'): PluginOperation {
   return {
@@ -296,7 +297,7 @@ function compatibility() {
 }
 
 function installedResult() {
-  const installed = currentOperation?.phase === 'committed'
+  const installed = currentOperation?.phase === 'committed' || installedVersion !== null
   return {
     profileName: 'web',
     profileRevision: installed ? 8 : 7,
@@ -304,7 +305,7 @@ function installedResult() {
     items: installed ? [{
       pluginId: PLUGIN.pluginId,
       packageName: '@fixture/workspace-tools',
-      version: PLUGIN.version,
+      version: installedVersion ?? PLUGIN.version,
       displayName: PLUGIN.displayName,
       icon: null,
       brandColor: PLUGIN.brandColor,
@@ -342,6 +343,7 @@ installAssembledBootEnv({
     compatibilityAllowed = true
     mutationsEnabled = false
     currentOperation = null
+    installedVersion = null
     operationListeners = new Set()
     Object.defineProperty(window, 'dshDesktop', {
       configurable: true,
@@ -488,4 +490,19 @@ it('desktop plugin install activation streams progress, commits after runtime pr
   fireEvent.click(await screen.findByRole('button', { name: 'Plugin Center' }))
   fireEvent.click((await screen.findAllByRole('button', { name: 'View details：Workspace tools' }))[0]!)
   expect((await screen.findByRole('button', { name: 'Installed' })).hasAttribute('disabled')).toBe(true)
+})
+
+it('assembled discovery keeps compatibility visible when another version is already installed', async () => {
+  installedVersion = '0.9.0'
+  mountAssembledApp(EXTRA_PLUGINS)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Plugin Discovery' }, { timeout: 10_000 }))
+  expect((await screen.findAllByRole('button', { name: 'Manage' })).length).toBeGreaterThan(0)
+  const opener = (await screen.findAllByRole('heading', { name: 'Workspace tools' }))[0]?.closest('button')
+  if (opener === null || opener === undefined) throw new Error('Discovery detail opener is missing')
+  fireEvent.click(opener)
+
+  expect(await screen.findByText('Installation is compatible now')).toBeTruthy()
+  expect(screen.queryByText('This version is already installed and enabled. No reinstall is needed.')).toBeNull()
+  expect((await screen.findAllByRole('button', { name: 'Manage' })).length).toBeGreaterThan(0)
 })

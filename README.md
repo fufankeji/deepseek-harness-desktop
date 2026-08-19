@@ -73,7 +73,7 @@ DeepSeek Harness Studio 使用 Electron 承载 DeepSeek Harness 的 Web 工作�
 - **Web 工作区**：保留 DeepSeek Harness 的会话、工作区、模型、工具、Skills 和插件运行能力。
 - **插件发现与推荐**：自动读取在线目录，通过精选、最近更新、生态热门、场景分类和搜索，帮助用户快速找到值得尝试的插件。
 - **Agent 智能找插件**：用一句自然语言描述需求，Agent 自动检索公开 `dsh-plugin` 目录、筛选相关候选并说明推荐理由。
-- **公开插件中心**：在线搜索 npm 公共 `dsh-plugin` 生态，在安装前校验确定版本、产物完整性、Bundle 声明和本机兼容性，并在已安装区域管理启用、停用与卸载。
+- **公开插件中心**：通过短包名、完整 npm 包名或明确 GitHub 仓库定位已经发布的 DSH Bundle，在安装前校验确定版本、产物完整性、Bundle 声明和本机兼容性；聚合 Bundle 可以复用当前 Desktop Host 实际打包的 DSH 模块，真正缺失的第三方依赖仍会被阻断。
 - **Preset 广场**：从独立一级页面浏览赋范官方与社区 Agent Preset，查看 Skill、工具和环境要求后安全安装，并从已安装列表直接用于新会话。
 - **应用中心**：集中启动由赋范桌面端内置维护的完整 AI 应用；应用拥有独立界面、数据目录和运行流程，并可按需显示在左侧导航。
 - **对话区视觉增强**：一键启用百炼 Qwen3.8 图像理解，支持截图、照片、图表、OCR 和工作区图片，不替换当前 DeepSeek 主模型。
@@ -116,7 +116,7 @@ DeepSeek Harness Studio 使用 Electron 承载 DeepSeek Harness 的 Web 工作�
   <br><sub>真实 Desktop 界面：插件头像、公开目录、已安装区域、“安装”按钮与三点管理入口。</sub>
 </p>
 
-选定插件后进入 **插件中心**，即可查看 npm 公共 Registry 中带 `dsh-plugin` 标签、并符合 DeepSeek Harness Bundle 规范的插件与 Skill Pack，完成从确认风险到运行验证的完整管理流程。
+选定插件后进入 **插件中心**，可以用短包名、完整 npm 包名或明确 GitHub 仓库查找发布到 npm 公共 Registry 的插件与 Skill Pack。`dsh-plugin` 只是发现信号；GitHub 也只用于映射已发布 npm 包，Studio 不会直接安装仓库源码。确定版本仍须通过 Bundle、完整性和运行兼容校验。
 
 - **在线发现**：搜索公开插件，查看版本、能力、权限、兼容性和风险说明。
 - **一键安装**：下载确定版本并校验包身份、完整性和 Bundle 声明；确认后自动安装并重启 Harness Host 验证运行状态。

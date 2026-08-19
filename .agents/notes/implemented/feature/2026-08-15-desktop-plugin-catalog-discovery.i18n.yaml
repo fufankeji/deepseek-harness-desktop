@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-15-desktop-plugin-catalog-discovery.md
-2026-08-15-desktop-plugin-catalog-discovery.md: 1499cc913183bfedc714996127afc23bf03dd8b2
-2026-08-15-desktop-plugin-catalog-discovery.zh.md: 7bdaf9a6934276350f523df15b923ce071f49977
+2026-08-15-desktop-plugin-catalog-discovery.md: e0c2b257a87e187fe2aa0cf73e4e14e842dccdb6
+2026-08-15-desktop-plugin-catalog-discovery.zh.md: da2520c0a73d779d976abba3813fbbc406847621

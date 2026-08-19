@@ -117,6 +117,19 @@ describe('catalog states', () => {
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ catalogKind: 'skill-pack', scope: 'local' }))
   })
 
+  it('renders actionable discovery context returned by the catalog', async () => {
+    const mapped = {
+      ...listResult({ catalogKind: 'plugin', scope: 'public', query: '', limit: 24 }),
+      notice: 'github-mapped' as const,
+    }
+    render(<PluginCenterTab {...props({
+      list: async () => mapped,
+      refresh: async () => mapped,
+    })} />)
+
+    expect(await screen.findByText(en.githubMapped)).toBeTruthy()
+  })
+
   it('opens installed lifecycle actions from the catalog overflow menu', async () => {
     render(<PluginCenterTab {...props({ mutationsEnabled: true })} />)
 

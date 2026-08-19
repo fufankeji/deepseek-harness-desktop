@@ -114,6 +114,14 @@ const SOURCE_KEYS = {
   cache: 'cacheSource',
 } satisfies Record<string, PluginCenterLocaleKey>
 
+const NOTICE_KEYS = {
+  'github-mapped': 'githubMapped',
+  'github-partial': 'githubPartial',
+  'github-source-only': 'githubSourceOnly',
+  'github-no-dsh-bundle': 'githubNoDshBundle',
+  'network-unavailable': 'catalogNetworkUnavailable',
+} as const satisfies Record<NonNullable<CatalogListResult['notice']>, PluginCenterLocaleKey>
+
 const MANAGEMENT_ACTION_KEYS = {
   update: 'updatePlugin',
   enable: 'enablePlugin',
@@ -1016,6 +1024,14 @@ export function PluginCenterTab({
             <div className={css.catalogNotice}>
               <span>{t('stale')} · {t(SOURCE_KEYS[ready.source])}</span>
               <button type="button" onClick={retry}>{t('retry')}</button>
+            </div>
+          ) : null}
+          {ready?.notice !== undefined ? (
+            <div className={css.catalogNotice} role="status">
+              <span>{t(NOTICE_KEYS[ready.notice])}</span>
+              {ready.notice === 'network-unavailable'
+                ? <button type="button" onClick={retry}>{t('retry')}</button>
+                : null}
             </div>
           ) : null}
           {view.status === 'loading' ? <CatalogSkeleton t={t} /> : null}

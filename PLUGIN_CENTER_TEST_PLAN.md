@@ -140,6 +140,15 @@
 - **真实卸载：** 通过条目三点菜单、保留配置/数据确认后执行卸载事务 `e3e693b3-1d02-4c7b-ab1d-3f0bd2644a5e`；Host 换代到第 3 代后提交，已安装投影中该包为空。显式安装重跑后页面显示三点管理入口且不再显示安装按钮。
 - **验收修补：** 客户端严格可选属性下的菜单 className 与设置测试夹具各做一处最小类型修补；完整客户端构建和 Desktop 源码/测试类型检查通过。目录包缺少发布期 `app-update.yml` 仍只产生非终止更新检查警告。
 
+### 2026-08-17 短名、GitHub 映射与聚合 Bundle 验收（macOS PASS）
+
+- **发现规则：** 输入 `dsh-web-ui-all`、`@linxin666/dsh-web-ui-all` 和 `@linxin666/dsh-web-ui-all@0.1.19` 均把同一确定版本排在第 1；短名同时如实返回另一个同尾名 scope，不擅自选择发布者。明确仓库 `https://github.com/zhu1090093659/dsh-web-ui` 有界解析出 21 个已发布 Bundle，最终回归中目标位于第 15。普通 npm 文本搜索只取一页，确定元数据读取另设每次 96 个候选硬上限；GitHub 映射、部分源码未发布、源码-only、无 Bundle 和网络失败分别显示可行动提示。
+- **资格与制品：** `@linxin666/dsh-web-ui-all@0.1.19` 没有 `dsh-plugin` 关键词和 `engines.node`，但固定 Registry 的确定版本、SHA-512 tarball、`dsh.bundle.patch`、13 个 Loader 条目与 13 个确定顶层依赖均通过。页面明确显示发布者未声明 Node.js 范围，不把 Studio 的技术运行范围冒充发布者承诺。
+- **真实安装与重启：** 使用项目内隔离 `DSH_HOME` 和 Electron user data 从真实 Desktop 确认高权限风险后安装。事务提交后 13 个目标 Loader 条目 active，12 个目标客户端模块存在；完整退出并重新启动 Desktop 后，任务看板、SSH 等真实界面贡献及相同运行证据继续存在。修补归属后再以新候选安装一次，事务 `ad223db9-e2a1-4c01-91dd-a650e388b701` 提交；验收结束时 Studio 保持运行且隔离 Profile 已安装该插件。
+- **聚合卸载修补：** 首次卸载暴露聚合包归属缺口：旧候选只声明顶层客户端模块，运行校验把子模块消失误判为无关损失并自动 `rolled-back`。修复后使用 Host 同源 YAML schema 结构化解析实际插入 Loader 树，再读取其确定依赖 npm 元数据，候选拥有完整 12 个客户端模块；再次卸载事务 `committed`，Profile 依赖、Bundle 层和安装目录均消失。该失败没有越过快照/回滚边界。
+- **用户 Profile 隔离：** 验收前后真实 `~/.dsh/profiles/web/package.json` 的 SHA-256 均为 `1c6804fe337b5e554bf7c06deb2a87ac811b1797bf2db52a51ea6b99d1d31344`，未修改老师真实 Profile。验收结束后 Studio 继续以隔离 Profile 运行。
+- **自动化：** npm 发现、YAML 结构、查询上限、缓存重新取证与聚合依赖 12 项，连同安装/管理代表测试共 19 项 PASS；Desktop 类型检查、GUI 287 文件 3,859 项与全量 build 通过。扩大到现有全部插件中心用例时，仍有与本改动无关的 rc.5→rc.7 版本断言 1 项和既有恢复矩阵 fixture 客户端声明 12 项失败，单独保留为基线债务。
+
 ## F002 与 F003 的汇合条件
 
 F003 只能消费 F002 的可信结果，不能重新发明兼容判断或接受渲染器提供的安装权威：
