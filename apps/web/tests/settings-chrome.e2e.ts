@@ -509,6 +509,12 @@ describe('web e2e: settings modal and General preferences', () => {
       // — the zh scenario above is the discriminating half. Asserted here too
       // so a future change that resolves en but writes the wrong tag is caught.
       expect(await frPage.evaluate(() => document.documentElement.lang)).toBe('en')
+      // rc.2 mounts more Host services before the roster-backed preset row
+      // settles. Pin the ready surface rather than snapshotting its intentional
+      // loading-disabled state on a fast machine.
+      await expect.poll(async () => dialog.getByRole('button', { name: 'Standard mode' }).isEnabled(), {
+        timeout: 10_000,
+      }).toBe(true)
       // Golden of the English fallback dialog — the visible output this change
       // produces. The zh golden above covers the detected-locale surface, so
       // the pair pins both directions of the resolution.

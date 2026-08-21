@@ -110,7 +110,7 @@ describe('assembled Bailian vision enhancement', () => {
     let firstRaw = ''
     let firstCompleted = false
     try {
-      expect(first.ctx.attachments.imageLimits.maxImageBytes).toBe(10 * 1024 * 1024)
+      expect(first.ctx.attachments.imageLimits.maxImageBytes).toBe(20 * 1024 * 1024)
       expectOk(await first.ctx.apiProxy.vision.enable({
         rpcId: RpcId('vision-enable-snapshot'),
         payload: {
