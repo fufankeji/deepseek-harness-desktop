@@ -7,7 +7,10 @@ export type DesktopUpdatePhase =
 /** Immutable update state supplied by the Electron main process. */
 export interface DesktopUpdateState {
   readonly phase: DesktopUpdatePhase
+  /** Running Studio shell version. */
   readonly currentVersion: string
+  /** Harness core version embedded in the packaged Host runtime. */
+  readonly harnessVersion: string
   readonly availableVersion?: string
   readonly progress?: number
   readonly message?: string

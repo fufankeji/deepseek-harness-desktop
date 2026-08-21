@@ -15,7 +15,9 @@ describe('Desktop online updates', () => {
     const onState = vi.fn()
     const bridge = {
       updates: {
-        getState: vi.fn(async () => ({ phase: 'up-to-date', currentVersion: '0.1.0-rc.7' })),
+        getState: vi.fn(async () => ({
+          phase: 'up-to-date', currentVersion: '0.1.0-rc.15', harnessVersion: '0.1.1-rc.2',
+        })),
         check,
         download,
         install,
@@ -26,7 +28,8 @@ describe('Desktop online updates', () => {
     render(<UpdateSection bridge={bridge} />)
     await act(async () => {})
 
-    expect(screen.getByText('当前版本 0.1.0-rc.7')).toBeTruthy()
+    expect(screen.getByText('Studio Desktop 0.1.0-rc.15')).toBeTruthy()
+    expect(screen.getByText('Harness 核心 0.1.1-rc.2')).toBeTruthy()
     expect(screen.getByText('暂未开放')).toBeTruthy()
     const button = screen.getByRole('button', { name: '在线更新暂未开放' })
     expect(button.hasAttribute('disabled')).toBe(true)

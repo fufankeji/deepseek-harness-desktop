@@ -52,7 +52,7 @@ Desktop 持有 Preset 广场的网络访问权威，只接受渲染器提交的�
 pnpm run package:desktop
 ```
 
-打包后的应用通过 Electron 的 Node 模式，在独立进程内运行已暂存的 `@deepseek-ai/dsh` CLI。应用因此保留受 supervisor 管理的 Host 生命周期，无需携带第二个 Node 可执行文件。如果暂存的 CLI 入口、Web 前端入口、通用 HTTPS 更新提供方或明确更新渠道缺失，`afterPack` 检查会在签名前拒绝该产物。同一钩子会为所有目标写入 `app-update.yml`，包括预览压缩包使用的未封装目录。预览包因此会请求已经发布的 `rc-mac.yml` 或 `rc.yml`，而不是 Electron 默认但并不存在的渠道文件，并能把同版本更新源正确识别为“已是最新”。macOS 和 Windows 都从受跟踪、带透明圆角的 `apps/desktop/build/icon.png` 派生平台图标；仓库不提交独立的平台专用变体。
+打包后的应用通过 Electron 的 Node 模式，在独立进程内运行已暂存的 `@deepseek-ai/dsh` CLI。应用因此保留受 supervisor 管理的 Host 生命周期，无需携带第二个 Node 可执行文件。如果暂存的 CLI 入口、Web 前端入口、通用 HTTPS 更新提供方或明确更新渠道缺失，`afterPack` 检查会在签名前拒绝该产物；它还会核验 Harness 图片管线所需的 macOS arm64 或 Windows x64 Sharp 原生模块。同一钩子会为所有目标写入 `app-update.yml`，包括预览压缩包使用的未封装目录。预览包因此会请求已经发布的 `rc-mac.yml` 或 `rc.yml`，而不是 Electron 默认但并不存在的渠道文件，并能把同版本更新源正确识别为“已是最新”。macOS 和 Windows 都从受跟踪、带透明圆角的 `apps/desktop/build/icon.png` 派生平台图标；仓库不提交独立的平台专用变体。
 
 ### 已签名的 macOS DMG 与 ZIP
 

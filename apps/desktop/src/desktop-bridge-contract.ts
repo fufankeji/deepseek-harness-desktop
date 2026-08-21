@@ -47,7 +47,10 @@ type DesktopUpdatePhase =
 /** Immutable update snapshot delivered to the settings page. */
 export interface DesktopUpdateState {
   readonly phase: DesktopUpdatePhase
+  /** Running Studio shell version. */
   readonly currentVersion: string
+  /** Harness core version embedded in the packaged Host runtime. */
+  readonly harnessVersion: string
   readonly availableVersion?: string
   readonly progress?: number
   readonly message?: string

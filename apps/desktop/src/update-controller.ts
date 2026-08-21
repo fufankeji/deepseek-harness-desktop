@@ -28,35 +28,53 @@ export class DesktopUpdateController {
   /**
    * @param updater - electron-updater singleton or a test driver.
    * @param currentVersion - running app version.
+   * @param harnessVersion - Harness core version embedded in the Host runtime.
    * @param packaged - false for source development runs, where real update installation is unavailable.
    */
-  constructor(updater: UpdaterDriver, currentVersion: string, packaged: boolean) {
+  constructor(
+    updater: UpdaterDriver,
+    currentVersion: string,
+    harnessVersion: string,
+    packaged: boolean,
+  ) {
     this.updater = updater
     this.packaged = packaged
     this.state = packaged
-      ? { phase: 'idle', currentVersion }
+      ? { phase: 'idle', currentVersion, harnessVersion }
       : {
         phase: 'development',
         currentVersion,
+        harnessVersion,
         message: '当前为开发版；正式安装包生成后即可从发布源检查更新。',
       }
     updater.autoDownload = false
     updater.autoInstallOnAppQuit = true
-    updater.on('checking-for-update', () => { this.publish({ phase: 'checking', currentVersion }) })
-    updater.on('update-available', (info) => {
-      this.publish({ phase: 'available', currentVersion, availableVersion: info.version })
+    updater.on('checking-for-update', () => {
+      this.publish({ phase: 'checking', currentVersion, harnessVersion })
     })
-    updater.on('update-not-available', () => { this.publish({ phase: 'up-to-date', currentVersion }) })
+    updater.on('update-available', (info) => {
+      this.publish({ phase: 'available', currentVersion, harnessVersion, availableVersion: info.version })
+    })
+    updater.on('update-not-available', () => {
+      this.publish({ phase: 'up-to-date', currentVersion, harnessVersion })
+    })
     updater.on('download-progress', (info) => {
       this.publish({
         phase: 'downloading',
         currentVersion,
+        harnessVersion,
         ...this.state.availableVersion === undefined ? {} : { availableVersion: this.state.availableVersion },
         progress: Math.max(0, Math.min(100, info.percent)),
       })
     })
     updater.on('update-downloaded', (info) => {
-      this.publish({ phase: 'ready', currentVersion, availableVersion: info.version, progress: 100 })
+      this.publish({
+        phase: 'ready',
+        currentVersion,
+        harnessVersion,
+        availableVersion: info.version,
+        progress: 100,
+      })
     })
     updater.on('error', (error) => {
       this.fail(error, this.state.phase === 'downloading' ? 'download' : 'check')
@@ -92,6 +110,7 @@ export class DesktopUpdateController {
     this.publish({
       phase: 'downloading',
       currentVersion: this.state.currentVersion,
+      harnessVersion: this.state.harnessVersion,
       ...this.state.availableVersion === undefined ? {} : { availableVersion: this.state.availableVersion },
       progress: 0,
     })
@@ -125,6 +144,7 @@ export class DesktopUpdateController {
     this.publish({
       phase: 'error',
       currentVersion: this.state.currentVersion,
+      harnessVersion: this.state.harnessVersion,
       ...this.state.availableVersion === undefined ? {} : { availableVersion: this.state.availableVersion },
       message: friendlyUpdateError(error, action),
     })

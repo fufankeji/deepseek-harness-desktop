@@ -561,7 +561,7 @@ export function installVisionEnhancement(ctx: Context): VisionEnhancementRuntime
     for (const agent of [...mountedAgents.keys()]) unmountAgent(agent)
   }, 'visionEnhancement.agentMounts()')
 
-  ctx.on('credentials/updated', (ref) => {
+  ctx.on('credentials/reference-updated', (ref) => {
     const active = resolveVisionSelection(current()).spec
     if (ref !== active.credentialRef && ref !== active.fallbackCredentialRef) return
     observationCache.clear()

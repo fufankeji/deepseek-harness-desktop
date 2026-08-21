@@ -64,6 +64,12 @@ export async function afterPack(context: AfterPackContext): Promise<void> {
       throw new Error('Windows x64 Sharp native module is missing from the packaged Host runtime')
     }
   }
+  if (context.electronPlatformName === 'darwin') {
+    const sharpFiles = await readdir(join(modules, '@img', 'sharp-darwin-arm64', 'lib'))
+    if (!sharpFiles.some(file => /^sharp-darwin-arm64-.*\.node$/.test(file))) {
+      throw new Error('macOS arm64 Sharp native module is missing from the packaged Host runtime')
+    }
+  }
   await writeFile(
     join(resources, 'app-update.yml'),
     dump(resolveUpdateConfiguration(context), { lineWidth: -1, noRefs: true }),

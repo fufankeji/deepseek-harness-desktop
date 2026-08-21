@@ -6,7 +6,7 @@ English | [中文](2026-08-20-automatic-visual-routing.zh.md)
 
 ## Problem
 
-Desktop already had a compatible visual sidecar when Harness rc.8 added direct image input for capable conversation models. Exposing both mechanisms independently would give users overlapping controls and could send the same image through both the primary model and the sidecar. Requiring a compatible-provider key even when the selected model accepts images would also add needless setup.
+Desktop already had a compatible visual sidecar when Harness added direct image input for capable conversation models. Exposing both mechanisms independently would give users overlapping controls and could send the same image through both the primary model and the sidecar. Requiring a compatible-provider key even when the selected model accepts images would also add needless setup.
 
 ## Decision
 
@@ -16,7 +16,9 @@ The Host owns the route decision through `vision.route` and the atomic `vision.a
 
 At the LLM boundary, a native route delegates the original image-bearing request exactly once. A compatible route replaces image blocks with the existing durable visual observations and does not forward the original image. While the switch is off, new image prompts are refused before attachment persistence and historical image blocks are replaced with an explicit model-visible omission marker; the UI and durable attachment history remain unchanged.
 
-This decision composes the exact-model native capability from [Direct DeepSeek vision input](2026-08-19-direct-deepseek-vision-input.md) with the verified sidecars from [Selectable visual providers](2026-08-16-selectable-visual-providers.md). It does not change provider credentials, model selection, attachment storage, or the settings dialog's compatible-provider configuration.
+For the built-in `DeepSeek-V4-Flash-Vision-Exp` route, Studio reuses the Harness rc.2 image pipeline rather than adding a second Desktop transport. The attachment service admits the official 20 MiB source-image default and creates one bounded deterministic request version. DeepSeek normally receives a reusable Files API `file_id`; if Files resolution fails or times out, the complete request falls back to the same prepared bytes as bounded inline data URLs. A request never mixes file ids and inline images, and neither native branch invokes the compatible sidecar.
+
+This decision composes the exact-model native capability with the verified sidecars from [Selectable visual providers](2026-08-16-selectable-visual-providers.md). It does not change provider credentials, model selection, attachment storage, or the settings dialog's compatible-provider configuration.
 
 ## Alternatives considered
 
@@ -30,4 +32,4 @@ This decision composes the exact-model native capability from [Direct DeepSeek v
 
 ## Consequences
 
-Users enable or disable one capability and do not configure a key for a native visual model. The actual route can change after model selection, so the composer reports the current path and the Host rechecks it at prompt admission and stream time. Automatic native routing is intentionally evidence-based: adapters that omit modality metadata use the compatible path and must declare `image` before receiving original image blocks. Disabling the feature prevents model access to images without deleting attachments or rewriting session history.
+Users enable or disable one capability and do not configure a separate compatible-provider key for a native visual model. The actual route can change after model selection, so the composer reports the current path and the Host rechecks it at prompt admission and stream time. Automatic native routing is intentionally evidence-based: adapters that omit modality metadata use the compatible path and must declare `image` before receiving original image blocks. Files reuse reduces repeated upload work, while the bounded all-inline fallback keeps one request recoverable without double-sending the image. Disabling the feature prevents model access to images without deleting attachments or rewriting session history.

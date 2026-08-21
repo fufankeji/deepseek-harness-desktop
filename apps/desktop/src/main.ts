@@ -450,6 +450,7 @@ function registerDesktopBridge(): PluginCenterBackend {
   updateController = new DesktopUpdateController(
     autoUpdater,
     app.getVersion(),
+    manifestVersion(paths.cliManifest),
     app.isPackaged,
   )
   updateController.subscribe((state) => {

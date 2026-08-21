@@ -3,7 +3,15 @@ import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import { AttachmentStore, type ImageAttachmentRef, type SaveImageAttachment, type StoredImageAttachment } from '@deepseek-ai/dsh-attachment'
 import {
-  CredentialProvider, credentialRef, type CredentialInfo, type CredentialRef, type ResolvedCredential,
+  CredentialProvider,
+  credentialRef,
+  type CredentialInfo,
+  type CredentialKey,
+  type CredentialRecord,
+  type CredentialRecordEntry,
+  type CredentialRecordInfo,
+  type CredentialRef,
+  type ResolvedCredential,
 } from '@deepseek-ai/dsh-credentials'
 import LlmRuntime, { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
@@ -33,6 +41,7 @@ class MemorySettings extends SettingsProvider {
 
 class MemoryCredentials extends CredentialProvider {
   private readonly values = new Map<string, string>()
+  private readonly records = new Map<CredentialKey, CredentialRecord>()
 
   seed(ref: CredentialRef, value: string): void {
     this.values.set(ref, value)
@@ -50,13 +59,45 @@ class MemoryCredentials extends CredentialProvider {
 
   set(ref: CredentialRef, value: string): Promise<void> {
     this.values.set(ref, value)
-    this.ctx.emit('credentials/updated', ref)
+    this.notifyUpdated(ref)
     return Promise.resolve()
   }
 
   unset(ref: CredentialRef): Promise<void> {
     this.values.delete(ref)
-    this.ctx.emit('credentials/updated', ref)
+    this.notifyUpdated(ref)
+    return Promise.resolve()
+  }
+
+  readRecord(key: CredentialKey): Promise<CredentialRecord | undefined> {
+    return Promise.resolve(this.records.get(key))
+  }
+
+  describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> {
+    const record = this.records.get(key)
+    return Promise.resolve(record === undefined
+      ? { configured: false, writable: true }
+      : { configured: true, kind: record.kind, writable: true })
+  }
+
+  listRecords(): Promise<readonly CredentialRecordEntry[]> {
+    return Promise.resolve([...this.records].map(([key, record]) => ({ key, kind: record.kind })))
+  }
+
+  async modifyRecord(
+    key: CredentialKey,
+    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+  ): Promise<CredentialRecord | undefined> {
+    const current = this.records.get(key)
+    const next = await mutate(current)
+    if (next === undefined) return current
+    this.records.set(key, next)
+    this.notifyRecordUpdated(key)
+    return next
+  }
+
+  deleteRecord(key: CredentialKey): Promise<void> {
+    if (this.records.delete(key)) this.notifyRecordUpdated(key)
     return Promise.resolve()
   }
 }

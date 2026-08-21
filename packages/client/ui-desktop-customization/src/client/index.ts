@@ -52,7 +52,7 @@ export function apply(ctx: ClientContext): void {
       ctx.remote.$on('settings/document-updated', (ns) => {
         if (ns === VISION_SETTINGS_NAMESPACE) vision.refreshIfLoaded()
       }),
-      ctx.remote.$on('credentials/updated', (ref) => {
+      ctx.remote.$on('credentials/reference-updated', (ref) => {
         if (ref === 'DSH_VISION_BAILIAN_API_KEY'
           || ref === 'DASHSCOPE_API_KEY'
           || ref === 'DSH_VISION_OPENROUTER_API_KEY'

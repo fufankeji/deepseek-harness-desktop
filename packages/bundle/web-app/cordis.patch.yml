@@ -13,13 +13,6 @@
 
 # ── surface-specific values the base deliberately omits ─────────────────────
 
-# Desktop validation and chat use the same attachment service. Raise its
-# per-image bound only for the packaged learner app; ordinary Web keeps the
-# base bundle's 5 MB default.
-- id: attachment-local
-  config:
-    maxImageBytes: !!js "process.env.DSH_DESKTOP === '1' ? 10485760 : undefined"
-
 - id: system-prompt
   config:
     persona: >-

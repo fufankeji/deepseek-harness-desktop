@@ -152,12 +152,22 @@ describe('Vision enhancement composer shortcut', () => {
     const activateRoute = vi.fn((modelProvider: string, model: string) => Promise.resolve({
       mode: 'native' as const, modelProvider, model,
     }))
-    render(<VisionEnhancementShortcut {...shortcutProps(ready(), { activateRoute })} />)
-    fireEvent.click(screen.getByRole('switch', { name: /已关闭/ }))
+    const resolveRoute = vi.fn((modelProvider: string, model: string) => Promise.resolve({
+      mode: 'native' as const, modelProvider, model,
+    }))
+    render(<VisionEnhancementShortcut {...shortcutProps(ready(), { activateRoute, resolveRoute })} />)
+    const control = screen.getByRole('switch', { name: /已关闭/ })
+    fireEvent.click(control)
     await waitFor(() => {
       expect(activateRoute).toHaveBeenCalledWith('deepseek-official', 'deepseek-v4-flash')
     })
     expect(screen.queryByText('阿里云百炼 · qwen3.8-max')).toBeNull()
+
+    vi.useFakeTimers()
+    fireEvent.pointerEnter(control)
+    await act(async () => { vi.advanceTimersByTime(350) })
+    expect(screen.getByText(/优先通过 DeepSeek Files API 安全上传并复用/)).toBeTruthy()
+    expect(screen.getByText(/不会重复调用兼容视觉服务/)).toBeTruthy()
   })
 
   it('disables directly when the shared capability is on', async () => {

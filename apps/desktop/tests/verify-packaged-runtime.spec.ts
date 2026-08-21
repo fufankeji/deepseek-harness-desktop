@@ -37,6 +37,7 @@ async function writeRequiredMacRuntime(appOutDir: string): Promise<void> {
     ['@deepseek-ai', 'dsh-web-frontend', 'dist', 'dsh-desktop', 'jiutian-dawn-compute-horizon.webp'],
     ['@deepseek-ai', 'dsh-web-frontend', 'dist', 'dsh-desktop', 'beyondata-logo.png'],
     ['pnpm', 'bin', 'pnpm.cjs'],
+    ['@img', 'sharp-darwin-arm64', 'lib', 'sharp-darwin-arm64-test.node'],
   ]
   for (const segments of required) {
     const file = join(modules, ...segments)
@@ -88,6 +89,30 @@ describe('packaged desktop runtime verification', () => {
         url: UPDATE_URL,
       }])))
         .rejects.toThrow('packaged desktop requires an explicit update channel')
+    } finally {
+      await rm(appOutDir, { recursive: true, force: true })
+    }
+  })
+
+  it('requires the macOS arm64 Sharp native module in a macOS package', async () => {
+    const appOutDir = await mkdtemp(join(tmpdir(), 'dsh-packaged-runtime-mac-sharp-'))
+    try {
+      await writeRequiredMacRuntime(appOutDir)
+      const sharp = join(
+        appOutDir,
+        'DeepSeek Harness.app',
+        'Contents',
+        'Resources',
+        'host',
+        'node_modules',
+        '@img',
+        'sharp-darwin-arm64',
+        'lib',
+        'sharp-darwin-arm64-test.node',
+      )
+      await rm(sharp)
+      await expect(afterPack(context(appOutDir)))
+        .rejects.toThrow('macOS arm64 Sharp native module is missing from the packaged Host runtime')
     } finally {
       await rm(appOutDir, { recursive: true, force: true })
     }
