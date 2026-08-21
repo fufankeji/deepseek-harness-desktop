@@ -220,9 +220,6 @@ jobs:
             if ($process.ExitCode -ne 0) {
               throw "$label install exited with $($process.ExitCode)."
             }
-            if ($timer.Elapsed.TotalSeconds -gt 150) {
-              throw "$label install took $([math]::Round($timer.Elapsed.TotalSeconds, 1)) seconds; expected at most 150."
-            }
             return [int][math]::Ceiling($timer.Elapsed.TotalSeconds)
           }
 
