@@ -67,6 +67,56 @@ jobs:
             --config.forceCodeSigning=false
           if ($LASTEXITCODE -ne 0) { throw "Windows installer build exited with $LASTEXITCODE." }
 
+      - name: Process one image with the packaged Windows Sharp runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $unpacked = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist\win-unpacked'
+          $application = Join-Path $unpacked 'DeepSeek Harness.exe'
+          $smoke = Join-Path $unpacked 'sharp-runtime-smoke.cjs'
+          @'
+          const sharp = require('./resources/host/node_modules/sharp')
+          sharp({
+            create: {
+              width: 64,
+              height: 36,
+              channels: 4,
+              background: { r: 36, g: 93, b: 184, alpha: 1 },
+            },
+          })
+            .webp()
+            .resize(32, 18)
+            .png()
+            .toBuffer({ resolveWithObject: true })
+            .then(({ data, info }) => {
+              if (info.format !== 'png' || info.width !== 32 || info.height !== 18 || data.length === 0) {
+                throw new Error(`unexpected Sharp output: ${JSON.stringify({ info, bytes: data.length })}`)
+              }
+              console.log(JSON.stringify({
+                format: info.format,
+                width: info.width,
+                height: info.height,
+                bytes: data.length,
+                sharp: sharp.versions.sharp,
+                vips: sharp.versions.vips,
+              }))
+            })
+            .catch((error) => {
+              console.error(error)
+              process.exitCode = 1
+            })
+          '@ | Set-Content -LiteralPath $smoke -Encoding utf8
+          try {
+            $env:ELECTRON_RUN_AS_NODE = '1'
+            & $application $smoke
+            if ($LASTEXITCODE -ne 0) {
+              throw "Packaged Windows Sharp smoke exited with $LASTEXITCODE."
+            }
+          } finally {
+            Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $smoke -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Verify custom-directory install, running uninstall, and reinstall
         shell: pwsh
         run: |
@@ -235,6 +285,7 @@ jobs:
             'reinstalled_packaged_host_start=PASS',
             'manually_deleted_install_repair=PASS',
             'repaired_packaged_host_start=PASS',
+            'packaged_sharp_processing=PASS',
             'differential_update_blockmap=PASS',
             "fresh_install_seconds=$freshInstallSeconds",
             "reinstall_seconds=$reinstallSeconds",
