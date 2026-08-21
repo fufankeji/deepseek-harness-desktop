@@ -146,6 +146,11 @@ jobs:
           $testRoot = Join-Path $env:RUNNER_TEMP 'dsh-installer-lifecycle'
           $userData = Join-Path $testRoot 'user-data'
           $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
+          $nodeExecutable = (Get-Command node -ErrorAction Stop).Source
+          $visionDriver = Join-Path $env:GITHUB_WORKSPACE 'node_modules\tsx\dist\cli.mjs'
+          if (-not (Test-Path -LiteralPath $visionDriver -PathType Leaf)) {
+            throw 'The committed Windows V4 Vision driver runtime is unavailable.'
+          }
           $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\Wbem"
           New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 
@@ -347,7 +352,7 @@ jobs:
             $env:DSH_DESKTOP_VISION_CDP = 'http://127.0.0.1:9226'
             $env:DSH_DESKTOP_VISION_IMAGE_PATH = $visionImage
             $env:DSH_DESKTOP_VISION_WORKSPACE_TITLE = $visionWorkspaceTitle
-            pnpm exec tsx apps/desktop/scripts/verify-installed-vision-e2e.ts
+            & $nodeExecutable $visionDriver apps/desktop/scripts/verify-installed-vision-e2e.ts
             if ($LASTEXITCODE -ne 0) {
               throw "Installed Windows V4 Vision journey exited with $LASTEXITCODE."
             }
