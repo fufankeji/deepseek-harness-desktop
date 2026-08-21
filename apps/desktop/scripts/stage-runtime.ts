@@ -15,10 +15,16 @@ const repositoryRoot = resolve(desktopRoot, '../..')
 const staging = join(desktopRoot, 'runtime-host')
 const deployRoot = resolve(desktopRoot, 'runtime')
 const deployPackage = '@deepseek-ai/dsh-desktop-runtime'
+const deployPackageManager = join(deployRoot, 'node_modules', ...PACKAGE_MANAGER_ENTRY_SEGMENTS)
 const entry = join(staging, 'node_modules/@deepseek-ai/dsh/lib/bin.js')
 const frontend = join(staging, 'node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html')
 const packageManagerEntry = join(staging, 'node_modules', ...PACKAGE_MANAGER_ENTRY_SEGMENTS)
 const packageManagerManifest = join(staging, 'node_modules/pnpm/package.json')
+const modulesState = join(staging, 'node_modules/.modules.yaml')
+const subprocessPostinstall = join(
+  staging,
+  'node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs',
+)
 const workspaceState = join(repositoryRoot, 'node_modules/.pnpm-workspace-state-v1.json')
 const stagedTextSuffixes = ['.cjs', '.js', '.json', '.mjs'] as const
 const targetPlatform = process.env.DSH_DESKTOP_TARGET_PLATFORM ?? process.platform
@@ -110,17 +116,36 @@ async function restoreLegacyHoists(): Promise<void> {
 }
 
 async function deploy(): Promise<void> {
+  if (!existsSync(deployPackageManager)) {
+    throw new Error(`desktop source package-manager entry is missing: ${deployPackageManager}`)
+  }
   const savedWorkspaceState = existsSync(workspaceState) ? await readFile(workspaceState) : undefined
   try {
-    await run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [
+    await run(process.execPath, [
+      deployPackageManager,
       '--config.verify-deps-before-run=false', '--filter', deployPackage, 'deploy', '--legacy', '--prod',
       '--config.node-linker=hoisted', '--config.auto-install-peers=false', '--config.link-workspace-packages=true',
-      '--config.allow-unused-patches=true', staging,
+      '--config.allow-unused-patches=true', '--config.strict-dep-builds=false', staging,
     ])
   } finally {
     if (savedWorkspaceState === undefined) await rm(workspaceState, { force: true })
     else await writeFile(workspaceState, savedWorkspaceState)
   }
+}
+
+async function restoreReviewedIgnoredBuild(): Promise<void> {
+  const source = await readFile(modulesState, 'utf8')
+  const section = /^ignoredBuilds:\n((?:  .*\n)*)/m.exec(source)?.[1] ?? ''
+  const ignored = [...section.matchAll(/^\s+-\s+("(?:[^"\\]|\\.)*")\s*$/gm)]
+    .map(match => JSON.parse(match[1]!) as string)
+  if (ignored.length === 0) return
+  if (ignored.length !== 1 || !ignored[0]?.startsWith('@deepseek-ai/dsh-subprocess-local@file:')) {
+    throw new Error(`desktop runtime deploy ignored an unexpected build-script set: ${JSON.stringify(ignored)}`)
+  }
+  if (!existsSync(subprocessPostinstall)) {
+    throw new Error(`desktop runtime reviewed postinstall is missing: ${subprocessPostinstall}`)
+  }
+  await run(process.execPath, [subprocessPostinstall])
 }
 
 async function main(): Promise<void> {
@@ -138,6 +163,7 @@ async function main(): Promise<void> {
   await deploy()
   await restoreLegacyHoists()
   await materializeLinks()
+  await restoreReviewedIgnoredBuild()
   const prunedMetadataFiles = await pruneRuntimeMetadata(join(staging, 'node_modules'))
   await removeBuildMachinePaths(staging)
   if (!existsSync(entry)) throw new Error(`desktop Host entry missing after staging: ${entry}`)
