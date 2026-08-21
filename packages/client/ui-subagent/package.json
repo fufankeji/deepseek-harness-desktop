@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-subagent",
   "description": "Subagent conversation catalog, continuation routing UI, and '@' reference source",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },
@@ -68,8 +68,10 @@
     "@deepseek-ai/dsh-subagent": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@types/react": "~18.3.1",
+    "@types/react-dom": "~18.3.0",
     "@deepseek-ai/cordis": "workspace:^",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "files": [
     "lib/index.js",
