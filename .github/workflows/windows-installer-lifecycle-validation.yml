@@ -2,6 +2,12 @@ name: Windows Installer Lifecycle Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      run_real_vision:
+        description: Run the installed-app V4 Vision journey with the protected repository secret
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -122,6 +128,8 @@ jobs:
 
       - name: Verify custom-directory install, running uninstall, and reinstall
         shell: pwsh
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DSH_WINDOWS_VISION_E2E_KEY }}
         run: |
           $ErrorActionPreference = 'Stop'
           $dist = Join-Path $env:GITHUB_WORKSPACE 'apps\desktop\dist'
@@ -140,6 +148,63 @@ jobs:
           $env:DSH_HOME = Join-Path $testRoot 'dsh-home'
           $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\Wbem"
           New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+
+          $runRealVision = '${{ inputs.run_real_vision }}' -eq 'true'
+          if ($runRealVision -and [string]::IsNullOrWhiteSpace($env:DEEPSEEK_API_KEY)) {
+            throw 'run_real_vision requires the protected DSH_WINDOWS_VISION_E2E_KEY repository secret.'
+          }
+          $visionWorkspaceTitle = 'dsh-windows-vision-workspace'
+          $visionWorkspace = Join-Path $testRoot $visionWorkspaceTitle
+          $visionImage = Join-Path $testRoot 'windows-vision-blue.png'
+          if ($runRealVision) {
+            New-Item -ItemType Directory -Path $visionWorkspace -Force | Out-Null
+            $storageDirectory = Join-Path $env:DSH_HOME 'storages'
+            New-Item -ItemType Directory -Path $storageDirectory -Force | Out-Null
+            $workspaceId = '7f0dc93f-026e-45f8-9050-39f206cb7f0f'
+            $now = [DateTime]::UtcNow.ToString('o')
+            $workspaceDocument = @{
+              unit = @{ name = 'workspace'; version = 2 }
+              global = @{
+                initialized = $true
+                workspaceIds = @($workspaceId)
+                archivedSessionIds = @()
+              }
+              tables = @{
+                workspaces = @{
+                  $workspaceId = @{
+                    path = $visionWorkspace
+                    title = $visionWorkspaceTitle
+                    sessionIds = @()
+                    createdAt = $now
+                    updatedAt = $now
+                  }
+                }
+              }
+            }
+            $workspaceDocument | ConvertTo-Json -Depth 8 |
+              Set-Content (Join-Path $storageDirectory 'workspace.json') -Encoding utf8
+            @'
+          ui-onboarding:
+            welcomeNoticeVersion: 2026-08-13.1
+          vision-enhancement:
+            enabled: true
+          agent-default-model:
+            provider: deepseek-official
+            model: deepseek-v4-flash-vision-exp
+            reasoningEffort: high
+          '@ | Set-Content (Join-Path $env:DSH_HOME 'settings.yaml') -Encoding utf8
+
+            Add-Type -AssemblyName System.Drawing
+            $bitmap = [System.Drawing.Bitmap]::new(256, 256)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            try {
+              $graphics.Clear([System.Drawing.Color]::FromArgb(36, 93, 184))
+              $bitmap.Save($visionImage, [System.Drawing.Imaging.ImageFormat]::Png)
+            } finally {
+              $graphics.Dispose()
+              $bitmap.Dispose()
+            }
+          }
 
           function Invoke-HarnessInstaller([string] $label) {
             $timer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -169,7 +234,7 @@ jobs:
             $stdout = Join-Path $testRoot "$label-stdout.log"
             $stderr = Join-Path $testRoot "$label-stderr.log"
             $process = Start-Process -FilePath $application `
-              -ArgumentList "--user-data-dir=$userData" `
+              -ArgumentList "--user-data-dir=$userData --remote-debugging-address=127.0.0.1 --remote-debugging-port=9226" `
               -RedirectStandardOutput $stdout `
               -RedirectStandardError $stderr `
               -PassThru
@@ -269,6 +334,38 @@ jobs:
 
           $freshInstallSeconds = Invoke-HarnessInstaller 'fresh'
           $freshApplication = Start-Harness 'fresh'
+          if ($runRealVision) {
+            $cdpDeadline = (Get-Date).AddSeconds(60)
+            do {
+              try {
+                Invoke-RestMethod -Uri 'http://127.0.0.1:9226/json/version' -TimeoutSec 3 | Out-Null
+                $cdpReady = $true
+              } catch {
+                $cdpReady = $false
+                Start-Sleep -Seconds 2
+              }
+            } while (-not $cdpReady -and (Get-Date) -lt $cdpDeadline)
+            if (-not $cdpReady) { throw 'Installed Desktop CDP endpoint did not become ready.' }
+
+            $env:DSH_DESKTOP_VISION_CDP = 'http://127.0.0.1:9226'
+            $env:DSH_DESKTOP_VISION_IMAGE_PATH = $visionImage
+            $env:DSH_DESKTOP_VISION_WORKSPACE_TITLE = $visionWorkspaceTitle
+            pnpm exec tsx apps/desktop/scripts/verify-installed-vision-e2e.ts
+            if ($LASTEXITCODE -ne 0) {
+              throw "Installed Windows V4 Vision journey exited with $LASTEXITCODE."
+            }
+            $filesIndex = Join-Path $env:DSH_HOME 'llm-deepseek\files-v3.json'
+            if (-not (Test-Path -LiteralPath $filesIndex -PathType Leaf)) {
+              throw 'Installed Windows V4 Vision journey produced no Files API index.'
+            }
+            $filesDocument = Get-Content -LiteralPath $filesIndex -Raw | ConvertFrom-Json
+            if ($filesDocument.formatVersion -ne 3 -or @($filesDocument.records).Count -lt 1) {
+              throw 'Installed Windows V4 Vision journey produced an invalid Files API index.'
+            }
+            $windowsVisionStatus = 'PASS'
+          } else {
+            $windowsVisionStatus = 'SKIPPED'
+          }
           Invoke-RunningUninstall $freshApplication 'fresh'
 
           $reinstallSeconds = Invoke-HarnessInstaller 'reinstall'
@@ -289,6 +386,7 @@ jobs:
             'manually_deleted_install_repair=PASS',
             'repaired_packaged_host_start=PASS',
             'packaged_sharp_processing=PASS',
+            "installed_v4_vision=$windowsVisionStatus",
             'differential_update_blockmap=PASS',
             "fresh_install_seconds=$freshInstallSeconds",
             "reinstall_seconds=$reinstallSeconds",
