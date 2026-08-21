@@ -18,6 +18,8 @@ export interface VisionEnableProbe {
   provider?: VisionProvider
   /** Provider model id selected for this verification. */
   model?: string
+  /** OpenAI-compatible API base URL for a self-hosted provider. */
+  baseUrl?: string
   /** Validated image media type. */
   mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
   /** Canonical Base64 image payload. */
@@ -42,6 +44,8 @@ export interface VisionEnhancementState {
   providers: readonly VisionProviderView[]
   /** Visual provider model reported by the Host. */
   model: string
+  /** OpenAI-compatible API base URL for the active self-hosted provider. */
+  baseUrl?: string
   /** Latest status or mutation failure. */
   error: string | null
 }
@@ -69,8 +73,29 @@ export class VisionEnhancementController {
         id: 'openrouter', name: 'OpenRouter', configured: false, defaultModel: 'openai/gpt-4.1-mini',
         apiKeyUrl: 'https://openrouter.ai/settings/keys', modelEditable: true,
       },
+      {
+        id: 'ollama', name: 'Ollama（本地）', configured: false, defaultModel: '',
+        apiKeyUrl: 'https://docs.ollama.com/api/openai-compatibility', modelEditable: true,
+        defaultBaseUrl: 'http://127.0.0.1:11434/v1', baseUrlEditable: true, apiKeyRequired: false,
+      },
+      {
+        id: 'vllm', name: 'vLLM（本地）', configured: false, defaultModel: '',
+        apiKeyUrl: 'https://docs.vllm.ai/en/stable/serving/openai_compatible_server/', modelEditable: true,
+        defaultBaseUrl: 'http://127.0.0.1:8000/v1', baseUrlEditable: true, apiKeyRequired: false,
+      },
+      {
+        id: 'sglang', name: 'SGLang（本地）', configured: false, defaultModel: '',
+        apiKeyUrl: 'https://docs.sglang.ai/developer_guide/bench_serving', modelEditable: true,
+        defaultBaseUrl: 'http://127.0.0.1:30000/v1', baseUrlEditable: true, apiKeyRequired: false,
+      },
+      {
+        id: 'custom', name: '自定义 OpenAI-compatible', configured: false, defaultModel: '',
+        apiKeyUrl: 'https://platform.openai.com/docs/api-reference/chat/create', modelEditable: true,
+        baseUrlEditable: true, apiKeyRequired: false,
+      },
     ],
     model: 'qwen3.8-max',
+    baseUrl: '',
     error: null,
   })
 
@@ -118,6 +143,7 @@ export class VisionEnhancementController {
           state.provider = value.provider
           state.providers = value.providers
           state.model = value.model
+          state.baseUrl = value.baseUrl ?? ''
           state.error = null
         })
       } catch (error) {
@@ -228,6 +254,7 @@ export class VisionEnhancementController {
             ? { ...provider, configured: true }
             : provider)
           state.model = value.model
+          state.baseUrl = value.baseUrl ?? input.baseUrl ?? ''
           state.error = null
         })
       }

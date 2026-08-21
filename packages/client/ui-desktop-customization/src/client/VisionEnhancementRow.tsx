@@ -73,6 +73,7 @@ export function VisionEnhancementRow({
         provider={state.provider}
         providers={state.providers}
         model={state.model}
+        baseUrl={state.baseUrl ?? ''}
         failure={failure}
         enable={enable}
         onClose={() => { setOpen(false) }}

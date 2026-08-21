@@ -4,7 +4,7 @@ import type { ImageMediaType } from '@deepseek-ai/dsh-attachment'
 import type { RpcRequest, RpcResponse } from './rpc.ts'
 
 /** Compatible visual providers supported by the Studio bridge. */
-export type VisionProvider = 'bailian' | 'openrouter'
+export type VisionProvider = 'bailian' | 'openrouter' | 'ollama' | 'vllm' | 'sglang' | 'custom'
 
 /** Value-free provider status exposed to the client. */
 export interface VisionProviderView {
@@ -14,6 +14,9 @@ export interface VisionProviderView {
   defaultModel: string
   apiKeyUrl: string
   modelEditable: boolean
+  defaultBaseUrl?: string
+  baseUrlEditable?: boolean
+  apiKeyRequired?: boolean
 }
 
 /** Host-authoritative visual-enhancement status. */
@@ -23,6 +26,7 @@ export interface VisionStatusView {
   provider: VisionProvider
   model: string
   apiKeyUrl: string
+  baseUrl?: string
   providers: readonly VisionProviderView[]
 }
 
@@ -30,6 +34,7 @@ export interface VisionStatusView {
 export interface VisionTestView {
   provider: VisionProvider
   model: string
+  baseUrl?: string
   description: string
 }
 
@@ -67,6 +72,7 @@ export interface VisionApi {
     apiKey?: string
     provider?: VisionProvider
     model?: string
+    baseUrl?: string
     mediaType: ImageMediaType
     data: string
     question?: string

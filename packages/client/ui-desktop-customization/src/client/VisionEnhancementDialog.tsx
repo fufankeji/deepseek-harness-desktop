@@ -56,6 +56,7 @@ interface VisionEnhancementDialogProps {
   provider: VisionEnhancementState['provider']
   providers: VisionEnhancementState['providers']
   model: string
+  baseUrl: string
   failure?: string | undefined
   onClose: () => void
   enable: (input: VisionEnableProbe, signal?: AbortSignal) => Promise<string>
@@ -63,12 +64,13 @@ interface VisionEnhancementDialogProps {
 
 /** Verify a real image before enabling the shared visual capability. */
 export function VisionEnhancementDialog({
-  open, provider: activeProvider, providers, model: activeModel,
+  open, provider: activeProvider, providers, model: activeModel, baseUrl: activeBaseUrl,
   failure: outerFailure, onClose, enable,
 }: VisionEnhancementDialogProps): ReactNode {
   const [apiKey, setApiKey] = useState('')
   const [provider, setProvider] = useState(activeProvider)
   const [model, setModel] = useState(activeModel)
+  const [baseUrl, setBaseUrl] = useState(activeBaseUrl)
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string>()
   const [result, setResult] = useState<string>()
@@ -80,10 +82,11 @@ export function VisionEnhancementDialog({
     if (open) return
     setProvider(activeProvider)
     setModel(activeModel)
+    setBaseUrl(activeBaseUrl)
     setApiKey('')
     setFailure(undefined)
     setResult(undefined)
-  }, [activeModel, activeProvider, open])
+  }, [activeBaseUrl, activeModel, activeProvider, open])
 
   useEffect(() => {
     if (!open || image !== undefined) return
@@ -98,7 +101,11 @@ export function VisionEnhancementDialog({
     if (image === undefined) { setFailure('验证图片还没有准备好。'); return }
     if (selectedProvider === undefined) { setFailure('没有可用的视觉提供方。'); return }
     if (model.trim() === '') { setFailure('请输入视觉模型。'); return }
-    if (!selectedProvider.configured && apiKey.trim() === '') {
+    if (selectedProvider.baseUrlEditable === true && baseUrl.trim() === '') {
+      setFailure(`请输入 ${selectedProvider.name} 服务地址。`)
+      return
+    }
+    if (selectedProvider.apiKeyRequired !== false && !selectedProvider.configured && apiKey.trim() === '') {
       setFailure(`请输入 ${selectedProvider.name} API Key。`)
       return
     }
@@ -110,6 +117,7 @@ export function VisionEnhancementDialog({
         ...(apiKey.trim() === '' ? {} : { apiKey: apiKey.trim() }),
         provider,
         model: model.trim(),
+        ...(selectedProvider.baseUrlEditable === true ? { baseUrl: baseUrl.trim() } : {}),
         mediaType: image.mediaType,
         data: image.data,
         name: image.name,
@@ -139,6 +147,7 @@ export function VisionEnhancementDialog({
     if (nextProvider === undefined) return
     setProvider(next)
     setModel(next === activeProvider ? activeModel : nextProvider.defaultModel)
+    setBaseUrl(next === activeProvider ? activeBaseUrl : nextProvider.defaultBaseUrl ?? '')
     setApiKey('')
     setFailure(undefined)
     setResult(undefined)
@@ -148,7 +157,9 @@ export function VisionEnhancementDialog({
     <Modal open={open} title="开启视觉能力增强" onClose={() => { if (!busy) onClose() }} className={css['modal'] as string}>
       <div className={css.modalBody}>
         <div className={css.hero}>
-          <div className={css.heroIcon}>{provider === 'openrouter' ? 'O' : 'Q'}</div>
+          <div className={css.heroIcon}>{({
+            bailian: 'Q', openrouter: 'O', ollama: 'O', vllm: 'V', sglang: 'S', custom: 'C',
+          } as const)[provider]}</div>
           <div><strong>{selectedProvider?.name ?? '视觉提供方'} · {model}</strong><span>验证通过后，能力会自动挂载到四个内置 Agent，以及未来新增的 Agent Preset。</span></div>
         </div>
         <div className={css.fieldGrid}>
@@ -168,18 +179,29 @@ export function VisionEnhancementDialog({
             />
           </label>
         </div>
+        {selectedProvider?.baseUrlEditable === true && <label className={css.field}>
+          <span>OpenAI-compatible 服务地址</span>
+          <input
+            value={baseUrl}
+            placeholder={selectedProvider.defaultBaseUrl ?? 'http://127.0.0.1:8000/v1'}
+            onChange={(event) => { setBaseUrl(event.target.value) }}
+            disabled={busy}
+          />
+        </label>}
         <label className={css.field}>
-          <span>{selectedProvider?.name ?? '视觉提供方'} API Key</span>
+          <span>{selectedProvider?.name ?? '视觉提供方'} API Key{selectedProvider?.apiKeyRequired === false ? '（可选）' : ''}</span>
           <input
             type="password"
             autoComplete="off"
             value={apiKey}
-            placeholder={selectedProvider?.configured === true ? '已保存，可留空直接重新验证' : '请输入 API Key'}
+            placeholder={selectedProvider?.apiKeyRequired === false
+              ? '本地服务未启用鉴权时可留空'
+              : selectedProvider?.configured === true ? '已保存，可留空直接重新验证' : '请输入 API Key'}
             onChange={(event) => { setApiKey(event.target.value) }}
             disabled={busy}
           />
         </label>
-        {selectedProvider !== undefined && <p className={css.help}>还没有 Key？<a href={selectedProvider.apiKeyUrl} target="_blank" rel="noreferrer">前往 {selectedProvider.name} 获取 API Key</a></p>}
+        {selectedProvider !== undefined && <p className={css.help}><a href={selectedProvider.apiKeyUrl} target="_blank" rel="noreferrer">查看 {selectedProvider.name} 接口说明</a></p>}
         <div className={css.testCard}>
           <div className={css.imageWrap}>{image === undefined ? <span>正在准备默认小猫图片…</span> : <img src={image.url} alt="视觉验证图片" />}</div>
           <div className={css.testInfo}>
@@ -190,7 +212,7 @@ export function VisionEnhancementDialog({
         </div>
         {result !== undefined && <div className={css.success}><strong>识别成功，视觉能力已开启</strong><p>{result}</p></div>}
         {(failure ?? outerFailure) !== undefined && <div className={css.error} role="alert">{failure ?? outerFailure}</div>}
-        <p className={css.privacy}>验证图片会发送至 {selectedProvider?.name ?? '所选视觉提供方'} 进行识别；API Key 仅保存在本机受保护的凭证文件中，不会写入对话或项目代码。</p>
+        <p className={css.privacy}>验证图片只会发送至 {selectedProvider?.baseUrlEditable === true ? baseUrl || '你填写的服务地址' : selectedProvider?.name ?? '所选视觉提供方'}；API Key 仅保存在本机受保护的凭证文件中，不会写入对话或项目代码。</p>
         <div className={css.actions}>
           <button type="button" className={css.secondary} disabled={busy} onClick={onClose}>{result === undefined ? '取消' : '完成'}</button>
           {result === undefined && <button type="button" className={css.primary} disabled={busy || image === undefined || selectedProvider === undefined} onClick={() => { void verify() }}>{busy ? `正在调用 ${selectedProvider?.name ?? '视觉服务'} 验证…` : '验证并开启'}</button>}

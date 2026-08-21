@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-21-self-hosted-vision-providers.md
+2026-08-21-self-hosted-vision-providers.md: c12b072b9202a970a47c4cea3513fdce59b0edc5
+2026-08-21-self-hosted-vision-providers.zh.md: 6a431a8ba419acb73d700450441e5f04382ad9dc
