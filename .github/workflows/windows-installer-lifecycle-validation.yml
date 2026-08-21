@@ -108,9 +108,12 @@ jobs:
           '@ | Set-Content -LiteralPath $smoke -Encoding utf8
           try {
             $env:ELECTRON_RUN_AS_NODE = '1'
-            & $application $smoke
-            if ($LASTEXITCODE -ne 0) {
-              throw "Packaged Windows Sharp smoke exited with $LASTEXITCODE."
+            $process = Start-Process -FilePath $application `
+              -ArgumentList ('"{0}"' -f $smoke) `
+              -Wait `
+              -PassThru
+            if ($process.ExitCode -ne 0) {
+              throw "Packaged Windows Sharp smoke exited with $($process.ExitCode)."
             }
           } finally {
             Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
