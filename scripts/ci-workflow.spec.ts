@@ -24,6 +24,14 @@ describe('CI workflow', () => {
     expect(wineGate.match(/^supportedArchitectures:$/gm)).toBeNull()
   })
 
+  it('allows the Studio-only Electron patch to stay unused only in the isolated Python runtime deploy', () => {
+    const workspaceSource = readFileSync(resolve(root, 'pnpm-workspace.yaml'), 'utf8')
+    const singleExeBuilder = readFileSync(resolve(root, 'scripts/build-exe-for-python-sdk.ts'), 'utf8')
+
+    expect(workspaceSource).not.toContain('allowUnusedPatches')
+    expect(singleExeBuilder.match(/--config\.allow-unused-patches=true/g)).toHaveLength(1)
+  })
+
   it('isolates every pnpm action setup destination per runner', () => {
     const files = ['.github/workflows/ci.yml', '.github/workflows/ci-master.yml']
     const setups: Array<{ jobName: string; step: unknown }> = []

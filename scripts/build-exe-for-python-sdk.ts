@@ -257,6 +257,9 @@ class SingleExeBuild {
       '--config.node-linker=hoisted',
       '--config.auto-install-peers=false',
       '--config.link-workspace-packages=true',
+      // The Studio root patches app-builder-lib for Electron packaging, but
+      // this isolated runtime closure intentionally does not contain it.
+      '--config.allow-unused-patches=true',
       this.staging,
     ])
     await this.restoreLegacyHoists()
