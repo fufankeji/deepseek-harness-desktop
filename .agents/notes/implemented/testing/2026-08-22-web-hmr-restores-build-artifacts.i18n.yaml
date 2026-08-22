@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-08-22-web-hmr-restores-build-artifacts.md
-2026-08-22-web-hmr-restores-build-artifacts.md: 7632a3e8d58df6c461c9ee4dcc53922dd36ae6ed
-2026-08-22-web-hmr-restores-build-artifacts.zh.md: be23d3c4d7f8e01e673c347ba54105cdff1fbd5e
+2026-08-22-web-hmr-restores-build-artifacts.md: f2395101fbe8e12d93d85fdc7fab03e3f7403806
+2026-08-22-web-hmr-restores-build-artifacts.zh.md: 16777871819e982655de7a91625f82a5df6b4921

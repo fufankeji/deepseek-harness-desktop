@@ -30,3 +30,9 @@ pnpm run pack:plugin
 ```
 
 `bundle` 会从 `application/` 生成独立运行制品。产品页面发生变化时，先从最终源码重新同步 `application/`，再构建新版本，避免维护第二套 UI。
+
+## Known Limitations and Deferred Work
+
+- 应用目前通过系统浏览器打开独立界面；在 Electron 窗口内嵌完整知识库界面尚未实现。
+- 插件不会携带或写死 DeepSeek API Key；运行环境必须由用户通过 DSH 凭证中心配置。
+- `runtime/` 是可重新生成的打包产物；Desktop 发布流程会从 `application/` 重建它，普通源码提交不把生成结果作为事实源。
