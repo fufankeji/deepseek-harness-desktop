@@ -42,7 +42,7 @@ const TRUSTED_BUILD_PACKAGES = [
 ] as const
 
 /** One bounded no-shell runtime process request. */
-export interface RuntimeProcessRequest {
+interface RuntimeProcessRequest {
   readonly command: string
   readonly args: readonly string[]
   readonly cwd?: string
@@ -51,7 +51,7 @@ export interface RuntimeProcessRequest {
 }
 
 /** Captured result from one bounded runtime process. */
-export interface RuntimeProcessResult {
+interface RuntimeProcessResult {
   readonly code: number | null
   readonly stdout: string
   readonly stderr: string

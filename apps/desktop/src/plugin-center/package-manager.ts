@@ -41,7 +41,7 @@ export interface PackageManagerInvocation {
 }
 
 /** Process result retained only for bounded Desktop diagnostics. */
-export interface PackageManagerProcessResult {
+interface PackageManagerProcessResult {
   readonly code: number | null
   readonly signal: NodeJS.Signals | null
   readonly stdout: string
@@ -68,7 +68,7 @@ export interface TrustedPackageManagerOptions {
 }
 
 /** Failed or timed-out fixed package-manager invocation. */
-export class PackageManagerInvocationError extends Error {
+class PackageManagerInvocationError extends Error {
   override readonly name = 'PackageManagerInvocationError'
 }
 
@@ -156,7 +156,7 @@ export function createPackageRemoveInvocation(
 }
 
 /** Build the fixed old-Profile package restoration invocation used only by F005. */
-export function createPackageRestoreInvocation(
+function createPackageRestoreInvocation(
   options: TrustedPackageManagerOptions,
   frozenLockfile: boolean,
 ): PackageManagerInvocation {
@@ -185,7 +185,7 @@ export function createPackageRestoreInvocation(
 }
 
 /** Native no-shell process adapter with bounded output and joined termination. */
-export const nativePackageManagerProcess: PackageManagerProcessAdapter = {
+const nativePackageManagerProcess: PackageManagerProcessAdapter = {
   run(invocation) {
     return new Promise((resolve, reject) => {
       const child = spawn(invocation.executable, [...invocation.args], {

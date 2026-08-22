@@ -120,7 +120,7 @@ export interface HostGeneration {
 }
 
 /** Detail reported when the currently owned ready generation exits by itself. */
-export interface HostUnexpectedExit extends HostGeneration {
+interface HostUnexpectedExit extends HostGeneration {
   /** Child exit code, when the operating system supplied one. */
   readonly code: number | null
   /** Child termination signal, when the operating system supplied one. */

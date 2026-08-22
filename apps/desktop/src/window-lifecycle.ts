@@ -13,7 +13,7 @@ export function isInstallerQuitRequest(commandLine: readonly string[]): boolean 
 }
 
 /** Minimal close event accepted by the desktop lifecycle. */
-export interface WindowCloseEvent {
+interface WindowCloseEvent {
   /** Keep the application alive while the window is hidden. */
   preventDefault(): void
 }

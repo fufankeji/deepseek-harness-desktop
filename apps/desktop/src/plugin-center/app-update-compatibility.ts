@@ -14,7 +14,7 @@ import type {
 import { evaluateInstalledActivationCompatibility } from './compatibility.ts'
 
 /** One external Bundle disabled before Host composition, with reproducible reasons. */
-export interface StartupCompatibilityDeactivation {
+interface StartupCompatibilityDeactivation {
   readonly pluginId: string
   readonly packageName: string
   readonly version: string

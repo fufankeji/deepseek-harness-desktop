@@ -19,7 +19,7 @@ import { CatalogCache } from './catalog-cache.ts'
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
 /** Result produced by the trusted HTTP transport. */
-export type CatalogTransportResult =
+type CatalogTransportResult =
   | { readonly status: 304 }
   | { readonly status: 200; readonly etag: string; readonly body: unknown }
 

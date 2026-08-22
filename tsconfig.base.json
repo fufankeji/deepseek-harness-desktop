@@ -160,6 +160,9 @@
       "@deepseek-ai/dsh-headless/startup": ["./packages/bundle/headless/src/startup.ts"],
       "@deepseek-ai/dsh-web-app/startup": ["./packages/bundle/web-app/src/startup.ts"],
       "@deepseek-ai/dsh-client-*/client": ["./packages/client/*/src/client"],
+      "@fufan/dsh-plugin-llm-wiki": ["./packages/examples/ff-llm-wiki-plugin/src"],
+      "@fufan/dsh-plugin-llm-wiki/client": ["./packages/examples/ff-llm-wiki-plugin/src/client"],
+      "@fufan/dsh-plugin-llm-wiki/invariant": ["./packages/examples/ff-llm-wiki-plugin/src/invariant.ts"],
        // One wildcard maps every @deepseek-ai/dsh-<name> to its source. Package
       // dir names are unique across groups, so first-on-disk-wins resolution is
       // unambiguous; adding a package under an existing group needs no edit

@@ -181,7 +181,7 @@ function snapshotDigest(content: SnapshotContent): string {
 }
 
 /** Decode every snapshot field and recheck its semantic hash. */
-export function decodeProfileMutationSnapshot(value: unknown): ProfileMutationSnapshot {
+function decodeProfileMutationSnapshot(value: unknown): ProfileMutationSnapshot {
   const source = record(value, 'document')
   exact(source, [
     'schemaVersion', 'snapshotId', 'operationId', 'createdAt', 'profileIdentity', 'packageName',

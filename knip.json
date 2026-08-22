@@ -5,12 +5,18 @@
   ],
   "ignoreBinaries": [
     "bwrap",
+    "ffmpeg",
+    "ffprobe",
     "icacls",
     "musl-gcc",
     "python3",
     "sandbox-exec",
+    "security",
     "tar",
     "taskkill",
+    "next",
+    "which",
+    "where",
     "where.exe"
   ],
   "ignoreWorkspaces": [
@@ -632,12 +638,49 @@
         "src/main.ts",
         "src/preload.ts",
         "scripts/**/*.ts",
-        "tests/**/*.spec.ts"
+        "tests/**/*.spec.ts",
+        "tests/**/*.e2e.ts"
       ],
       "project": [
         "src/**/*.ts",
         "scripts/**/*.ts",
         "tests/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "pnpm",
+        "semver"
+      ]
+    },
+    "packages/examples/ff-llm-wiki-plugin": {
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.mjs"
+      ],
+      "ignore": [
+        "src/css-modules.d.ts"
+      ],
+      "ignoreDependencies": [
+        "@fastify/cors",
+        "@fastify/multipart",
+        "@llmwiki/contracts",
+        "fastify",
+        "mammoth",
+        "pdf-parse"
+      ]
+    },
+    "packages/examples/plugin-center-fixture": {
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "@deepseek-ai/dsh-host-plugin-inventory",
+        "@types/react",
+        "react"
+      ]
+    },
+    "packages/examples/plugin-center-skill-fixture": {
+      "project": [
+        "src/**/*.ts"
       ]
     },
     "apps/cli": {
