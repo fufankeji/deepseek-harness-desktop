@@ -24,6 +24,9 @@
       - text: DeepSeek
       - img "API 密钥缺失"
       - button "编辑 DeepSeek (deepseek-official)": 编辑
+      - text: 视觉增强模型
+      - strong: DeepSeek-V4-Flash-Vision-Exp
+      - text: 支持图片 开启“视觉增强”时选用，复用现有 DeepSeek API Key。
   - text: 提供方
   - combobox "提供方":
     - option "amazon-bedrock"

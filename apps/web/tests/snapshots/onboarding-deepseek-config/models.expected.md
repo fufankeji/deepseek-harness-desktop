@@ -24,7 +24,9 @@
       - text: DeepSeek
       - img "API 密钥已配置"
       - button "编辑 DeepSeek (deepseek-official)": 编辑
-      - text: DeepSeek deepseek-official API 密钥
+      - text: 视觉增强模型
+      - strong: DeepSeek-V4-Flash-Vision-Exp
+      - text: 支持图片 开启“视觉增强”时选用，复用现有 DeepSeek API Key。 DeepSeek deepseek-official API 密钥
       - textbox "API 密钥":
         - /placeholder: 已配置——输入新值可替换
       - group:
@@ -54,6 +56,7 @@
             - img
           - button "删除模型 2":
             - img
+          - text: 支持图片
           - textbox "模型 ID 3":
             - /placeholder: 模型 ID
             - text: private-preview
