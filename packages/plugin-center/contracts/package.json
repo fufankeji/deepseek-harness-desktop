@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-plugin-center-contracts",
   "description": "Strict JSON contracts for the Desktop Plugin Center catalog",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },
