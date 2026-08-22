@@ -8,6 +8,22 @@ const runnerPrivatePnpmDestination = '${{ runner.temp }}/setup-pnpm'
 const nativeWindowsPnpmDestination = '${{ runner.temp }}/setup-pnpm-js'
 
 describe('CI workflow', () => {
+  it('keeps Wine snapshot overrides distinct from the root architecture declaration', () => {
+    const workspaceSource = readFileSync(resolve(root, 'pnpm-workspace.yaml'), 'utf8')
+    const workspace = yaml.load(workspaceSource)
+    const wineGate = readFileSync(resolve(root, 'scripts/wine-windows-gates.sh'), 'utf8')
+    if (!isRecord(workspace) || !isRecord(workspace.supportedArchitectures)) {
+      throw new TypeError('pnpm-workspace.yaml must own supportedArchitectures')
+    }
+
+    expect(workspace.supportedArchitectures).toEqual({
+      os: ['current', 'win32'],
+      cpu: ['current', 'x64'],
+    })
+    expect(wineGate.match(/^nodeLinker: hoisted$/gm)).toHaveLength(1)
+    expect(wineGate.match(/^supportedArchitectures:$/gm)).toBeNull()
+  })
+
   it('isolates every pnpm action setup destination per runner', () => {
     const files = ['.github/workflows/ci.yml', '.github/workflows/ci-master.yml']
     const setups: Array<{ jobName: string; step: unknown }> = []

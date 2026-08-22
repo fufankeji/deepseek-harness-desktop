@@ -7,10 +7,11 @@
 #
 # The working tree is never mutated: tracked plus untracked-unignored files
 # are snapshotted into a scratch directory, the Wine-specific pnpm overrides
-# (hoisted layout, win32-x64 platform packages) are appended to the SNAPSHOT's
-# pnpm-workspace.yaml, and the install and gates run there against the shared
-# pnpm store. The Wine prefix and the checksum-verified Windows Node zip
-# persist in .cache/wine-windows/ so reruns skip provisioning.
+# hoisted layout is appended to the SNAPSHOT's pnpm-workspace.yaml; the root
+# workspace already owns the win32-x64 platform-package declaration used by
+# Desktop cross-packaging. The install and gates then run against the shared
+# pnpm store. The Wine prefix and the checksum-verified Windows Node zip persist
+# in .cache/wine-windows/ so reruns skip provisioning.
 #
 # Environment: DSH_WINE_NODE_MAJOR (default $PRIMARY_NODE_VERSION, then 24)
 # picks the Windows Node line; DSH_WINE_GATE_CACHE_DIR relocates the cache;
@@ -144,11 +145,12 @@ boot_wine() {
 snapshot_and_install() {
   # Tracked + untracked-unignored files, minus agent-session litter; the
   # existence filter drops paths staged as deleted. Then the Wine-specific
-  # install-time overrides go on the SNAPSHOT only: hoisted because Windows
-  # Node under Wine does not realpath pnpm's isolated-layout symlinks, and
-  # win32-x64 so the Windows esbuild/rolldown/rollup binaries materialize.
-  # Neither is recorded in the lockfile, so --frozen-lockfile stays valid;
-  # --ignore-scripts skips host lifecycle scripts no gate loads.
+  # install-time override goes on the SNAPSHOT only: hoisted because Windows
+  # Node under Wine does not realpath pnpm's isolated-layout symlinks. The root
+  # workspace already declares current + win32 and current + x64, so appending
+  # a second supportedArchitectures key would make the snapshot invalid YAML.
+  # The linker override is not recorded in the lockfile, so --frozen-lockfile
+  # stays valid; --ignore-scripts skips host lifecycle scripts no gate loads.
   git -C "$repo_root" ls-files -z --cached --others --exclude-standard -- . ':!:.claude' ':!:.codex' \
     | while IFS= read -r -d '' file; do [ -e "$repo_root/$file" ] && printf '%s\0' "$file"; done \
     | tar -C "$repo_root" --null --files-from=- -cf - \
@@ -156,9 +158,6 @@ snapshot_and_install() {
   cat >> "$scratch/tree/pnpm-workspace.yaml" << 'EOF'
 
 nodeLinker: hoisted
-supportedArchitectures:
-  os: [current, win32]
-  cpu: [current, x64]
 EOF
   # The hoisted linker — used only by this lane — has an upstream rename
   # race (pnpm/pnpm#12880): parallel linkers staging a nested package copy
