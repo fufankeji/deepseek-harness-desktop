@@ -111,7 +111,7 @@ describe('plugin center release environment', () => {
       activeOperation: false,
     })
     expect(fingerprint).toMatchObject({
-      desktopVersion: '0.1.0-rc.15',
+      desktopVersion: '0.1.0-rc.16',
       dshVersion: '0.1.1-rc.2',
       nodeVersion: '22.22.0',
       platform: 'darwin-arm64',

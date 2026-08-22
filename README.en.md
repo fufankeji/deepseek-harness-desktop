@@ -64,16 +64,18 @@ Desktop installers are published only through this repository's GitHub Releases 
 - **Plugin Discovery and recommendations**: read the online catalog and use featured, recently updated, ecosystem-popular, scenario filters, and search to find plugins worth trying.
 - **Agent-assisted plugin search**: describe a need in natural language and let the Agent search the public `dsh-plugin` catalog, rank relevant candidates, and explain each recommendation.
 - **Public Plugin Center**: locate published DSH Bundles by short package name, full npm name, or an explicit GitHub repository; verify exact identity, artifact integrity, Bundle declaration, and local compatibility before installation. Aggregate Bundles may reuse DSH modules packaged with the current Desktop Host, while genuinely missing third-party dependencies remain blocked.
-- **Composer vision enhancement**: keep one switch; send original images when exact-model metadata declares image support, otherwise use a verified Bailian or OpenRouter-compatible vision route, with each image entering exactly one path.
+- **Preset Square**: browse Fufan Official and community Agent Presets from a first-class page, inspect their Skills, tools, and environment requirements, install them safely, and start a new session from the installed list.
+- **Application Center**: launch complete AI applications maintained by the Fufan Desktop team; each application owns its interface, data, and runtime flow and can be shown or hidden in the sidebar.
+- **Composer vision enhancement**: keep one switch; send original images when exact-model metadata declares image support, otherwise use a verified cloud or self-hosted compatible vision route, with each image entering exactly one path.
 - **Desktop appearance settings**: built-in Whale Maid and Cloud Cat skins, plus local backgrounds, subject focus, and interface glass controls.
 - **Complete development source**: desktop app, Web interface, CLI, capability packages, native helpers, Python SDK, examples, and build scripts are kept in the repository.
 
-## DeepSeek Harness rc.8 compatibility
+## DeepSeek Harness v0.1.1-rc.2 compatibility
 
-Studio `0.1.0-rc.15` integrates the core and Web capabilities from DeepSeek Harness `0.1.1-rc.1` while retaining Beyondata's Plugin Center, Plugin Discovery, Preset Square, Application Center, themes, and desktop recovery flows. Studio and upstream Harness versions are managed independently.
+The current `0.1.0-rc.16` development source integrates the core and Web capabilities from DeepSeek Harness `0.1.1-rc.2` while retaining Beyondata's Plugin Center, Plugin Discovery, Preset Square, Application Center, themes, and desktop recovery flows. Studio and upstream Harness versions are managed independently; the links above continue to point to the already published and accepted `0.1.0-rc.15` installers.
 
-- **Models and vision**: supports DeepSeek's `low` reasoning effort, exact-model native image capability declarations, and automatic routing between native and compatible vision behind one switch.
-- **Attachments and references**: supports persistent image attachments, `@` file or session references, and image-bearing `/goal` and `/plan` input.
+- **Models and vision**: keeps Pro and Flash as text models; the single vision-enhancement control selects `DeepSeek-V4-Flash-Vision-Exp`, while verified cloud and self-hosted compatible routes remain available for text models.
+- **Attachments and references**: supports persistent image attachments, `@` file or session references, and image-bearing `/goal` and `/plan` input. Native DeepSeek images use reusable Files API uploads, bounded stale-reference retries, and a whole-request inline fallback when file resolution fails.
 - **Plugins and settings**: renders plugin-provided dynamic settings cards while keeping installation, configuration, enablement, disabling, and removal in the existing Plugin Center flow.
 - **Jobs and runtime**: integrates subagent jobs, concurrent Web Search, faster history forks, and persistent PowerShell PTY sessions on Windows.
 - **Desktop compatibility**: starts the Desktop Host with `--no-open` to avoid opening an extra browser and retains native directory selection, plugin transaction recovery, and existing user-data locations.
