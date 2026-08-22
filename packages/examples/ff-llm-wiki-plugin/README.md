@@ -12,6 +12,8 @@
 
 点击 DSH 侧栏的 `FF - LLM Wiki` 后，Desktop 会在系统浏览器打开独立应用。DSH 原页面、导航、主题和工作区保持不变。
 
+应用启动会校验 `content/.wiki.lock` 中的进程 PID；上次异常退出留下的锁会被立即回收，正在运行的编译进程则继续持有互斥锁。
+
 ## 安装
 
 在 DeepSeek Harness 插件中心搜索 `@fufan/dsh-plugin-llm-wiki` 并安装；离线环境可选择本项目产出的 `.tgz`。安装完成并重启 Host 后，侧栏会出现启动入口。

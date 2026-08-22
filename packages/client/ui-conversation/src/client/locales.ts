@@ -54,7 +54,7 @@ export const zh = {
   'image.totalTooLarge': '图片总大小超过 {size}，请移除部分图片',
   'image.tooManyPixels': '图片分辨率过大，请压缩后重试',
   'image.dimensionTooLarge': '图片宽高不能超过 {size}px，请缩小后重试',
-  'image.modelUnsupported': '当前模型不支持图片，请切换支持图片的模型',
+  'image.modelUnsupported': '当前文本模型不支持图片，请先点击“视觉增强”切换图文模型',
   'image.subagentUnsupported': '子智能体会话暂不支持图片',
   'image.sendFailed': '图片发送失败（{reason}），请重新添加图片后再试',
   'context.aria': '上下文已用 {percent}',

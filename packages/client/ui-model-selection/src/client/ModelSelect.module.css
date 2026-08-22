@@ -225,7 +225,15 @@
   min-width: 0;
 }
 
+.modelTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
 .modelName {
+  min-width: 0;
   overflow: hidden;
   color: inherit;
   font-size: 14px;
@@ -233,6 +241,17 @@
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nativeVisionBadge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 600;
 }
 
 .description {

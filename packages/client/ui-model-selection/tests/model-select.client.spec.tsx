@@ -160,6 +160,43 @@ describe('ModelSelect reasoning effort', () => {
     expect(select).toHaveBeenNthCalledWith(2, { provider: 'deepseek-official', model: 'deepseek-v4-flash' })
   })
 
+  it('marks the DeepSeek native vision model as the recommended multimodal route', () => {
+    const vision = {
+      id: 'deepseek-v4-flash-vision-exp',
+      name: 'DeepSeek-V4-Flash-Vision-Exp',
+    }
+    const directory = createSnapshotStore<ModelDirectoryState>(state({
+      current: { provider: 'deepseek-official', model: vision.id },
+      groups: [{
+        id: 'deepseek-official',
+        name: 'DeepSeek',
+        models: [
+          { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', reasoning },
+          vision,
+        ],
+      }],
+    }))
+    render(<ModelSelect
+      locked={false}
+      available
+      directory={directory}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue(true)}
+      t={t}
+    />)
+
+    const trigger = screen.getByRole('button', {
+      name: /DeepSeek-V4-Flash-Vision-Exp · 支持图片/,
+    })
+    expect(trigger.textContent).toBe('DeepSeek-V4-Flash-Vision-Exp')
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: /模型/ }))
+    const option = screen.getByRole('menuitemradio', {
+      name: /DeepSeek-V4-Flash-Vision-Exp.*支持图片/,
+    })
+    expect(option.getAttribute('aria-checked')).toBe('true')
+  })
+
   it('offers provider default only when the adapter does not configure a model default', () => {
     const directory = createSnapshotStore(state({
       groups: [{

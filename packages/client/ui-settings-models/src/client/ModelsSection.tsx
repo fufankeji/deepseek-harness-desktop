@@ -25,6 +25,8 @@ import { ProviderEditor, type ProviderEditorProps } from './ProviderEditor.tsx'
 import type { en } from './locales.ts'
 import styles from './ModelsSection.module.css'
 
+const DEEPSEEK_NATIVE_VISION_MODEL = 'DeepSeek-V4-Flash-Vision-Exp'
+
 /** Injected dependencies of {@link ModelsSection} (slot `inject`). */
 export interface ModelsSectionInjected {
   /** The page store (loaded on mount, refreshed on pushed invalidations). */
@@ -388,6 +390,16 @@ function Loaded({ injected }: { injected: ModelsSectionFace }): ReactNode {
                     : null}
                 </span>
               </div>
+              {row.entry.provider === 'deepseek-official'
+                ? (
+                  <div className={styles['nativeVisionSummary']}>
+                    <span className={styles['nativeVisionSummaryLabel']}>{t('nativeVisionAvailable')}</span>
+                    <strong>{DEEPSEEK_NATIVE_VISION_MODEL}</strong>
+                    <span className={styles['imageInputBadge']}>{t('imageInputBadge')}</span>
+                    <span className={styles['nativeVisionSummaryHint']}>{t('nativeVisionSharedKey')}</span>
+                  </div>
+                )
+                : null}
               {open
                 ? renderProviderEditor({
                   target,

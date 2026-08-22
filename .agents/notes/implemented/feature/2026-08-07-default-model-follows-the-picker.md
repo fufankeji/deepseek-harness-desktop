@@ -12,7 +12,7 @@ Reasoning effort makes the persistence shape significant: a model selection with
 
 ## Decision
 
-`AgentDefaultModelConfig` provides `ctx.agentDefaultModel` and registers `{provider, model, reasoningEffort?}` as the `agent-default-model` Settings section. Its `{provider, model}` composition entry is the base layer and `settings.yaml` supplies the user layer. The service is entry-point-neutral, so direct creation and ApiProxy-backed creation share one default ([headless direct core entry point](../architecture/2026-08-09-headless-direct-core-entry-point.md)).
+`AgentDefaultModelConfig` provides `ctx.agentDefaultModel` and registers `{provider, model, reasoningEffort?}` as the `agent-default-model` Settings section. The base composition entry selects the text model `deepseek-v4-flash`, and `settings.yaml` supplies the user layer. The service is entry-point-neutral, so direct creation and ApiProxy-backed creation share one default ([headless direct core entry point](../architecture/2026-08-09-headless-direct-core-entry-point.md)).
 
 `reasoningEffort` belongs to the Settings section but not to the plugin config. Settings layers merge by field, so a configured effort would survive a user selection that omits it. `saveSelection()` instead writes the complete user section; absence therefore clears a stored effort. A deployment-wide effort default belongs to the adapter profile, which resolves it per model.
 
@@ -27,6 +27,8 @@ The stored selection does not require catalog membership. A provider route may s
 ## Consequences
 
 `host.describe` reports the live Agent default. A successful model switch stores an `agent-default-model:` section in `settings.yaml`. The gateway does not expose that namespace through its Settings-page allowlist; the model picker is its editor.
+
+The Desktop visual-enhancement shortcut contains no duplicate model label. When enabled from a text-only selection, it first selects `deepseek-v4-flash-vision-exp` through the same `ModelDirectory`; the model selector on the right then becomes the visible source of the active model name. The Models settings page describes this route as the Visual Enhancement model and uses one image-input badge on its model row. These surfaces do not create a second preference or credential: the selected route stays under `deepseek-official` and resolves the existing DeepSeek credential.
 
 ## A session that cannot send
 

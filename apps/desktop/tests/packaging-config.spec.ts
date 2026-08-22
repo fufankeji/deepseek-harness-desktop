@@ -104,7 +104,10 @@ describe('desktop packaging configuration', () => {
   })
 
   it('builds and stages the complete workspace before local packaging', () => {
+    expect(desktopPackage.scripts['build:applications'])
+      .toBe('pnpm --filter @fufan/dsh-plugin-llm-wiki run build:application')
     for (const name of ['package', 'dist']) {
+      expect(desktopPackage.scripts[name]).toContain('pnpm run build:applications')
       expect(desktopPackage.scripts[name]).toContain('pnpm --workspace-root run build')
       expect(desktopPackage.scripts[name]).toContain('scripts/stage-runtime.ts')
     }
@@ -126,12 +129,14 @@ describe('desktop packaging configuration', () => {
     const command = desktopPackage.scripts['dist:mac']
 
     expect(command).toBe('node --import tsx scripts/release-mac.ts')
+    expect(macReleaseScript).toContain("'@fufan/dsh-plugin-llm-wiki', 'run', 'build:application'")
     expect(macReleaseScript).toContain("'--mac', 'dmg', 'zip'")
     expect(desktopPackage.build.mac.hardenedRuntime).toBe(true)
     expect(desktopPackage.build.mac.notarize).toBe(true)
   })
 
   it('builds a per-user Windows x64 NSIS installer from a Windows-targeted runtime', () => {
+    expect(desktopPackage.scripts['dist:win']).toContain('pnpm run build:applications')
     expect(desktopPackage.scripts['dist:win']).toContain('DSH_DESKTOP_TARGET_PLATFORM=win32')
     expect(desktopPackage.scripts['dist:win']).toContain('DSH_DESKTOP_TARGET_ARCH=x64')
     expect(desktopPackage.scripts['dist:win']).toContain('scripts/release-win.ts')

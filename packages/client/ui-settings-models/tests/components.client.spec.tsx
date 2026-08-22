@@ -258,7 +258,12 @@ describe('ModelsSection', () => {
     expect(configured.className).toContain('credentialDotConfigured')
     expect(configured.closest('li')?.textContent).toContain('openai')
     const missing = screen.getByRole('img', { name: en.credentialMissing })
-    expect(missing.closest('li')?.textContent).toContain('DeepSeek')
+    const deepSeekRow = missing.closest('li')
+    expect(deepSeekRow?.textContent).toContain('DeepSeek')
+    expect(deepSeekRow?.textContent).toContain('DeepSeek-V4-Flash-Vision-Exp')
+    expect(deepSeekRow?.textContent).toContain(en.nativeVisionAvailable)
+    expect(deepSeekRow?.textContent).toContain(en.imageInputBadge)
+    expect(deepSeekRow?.textContent).toContain(en.nativeVisionSharedKey)
     // The card is still one click away.
     fireEvent.click(screen.getByRole('button', { name: deepSeekCopy(en.editProvider) }))
     expect(screen.getByLabelText(en.keyInput)).toBeTruthy()
@@ -505,6 +510,29 @@ describe('ModelsSection', () => {
       }],
       expectedRevision: 0,
     })
+  })
+
+  it('shows image capability without opening advanced settings', () => {
+    render(<DeepSeekModelsEditor
+      models={[
+        { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', inputModalities: ['text'] },
+        {
+          id: 'deepseek-v4-flash-vision-exp',
+          name: 'DeepSeek-V4-Flash-Vision-Exp',
+          inputModalities: ['text', 'image'],
+        },
+      ]}
+      overridden={false}
+      defaultContextWindow={1_000_000}
+      defaultMaxTokens={256_000}
+      t={t}
+      disabled={false}
+      onChange={vi.fn()}
+      onReset={vi.fn()}
+    />)
+
+    expect(screen.getByText(en.imageInputBadge)).toBeTruthy()
+    expect(screen.queryByLabelText(`${en.nativeImageInput} 2`)).toBeNull()
   })
 
   it('removes only image capability and keeps the required text modality', () => {

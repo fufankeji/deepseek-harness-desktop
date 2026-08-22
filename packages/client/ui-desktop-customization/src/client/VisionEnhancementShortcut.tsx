@@ -15,6 +15,9 @@ import type {
 import { VisionEnhancementDialog } from './VisionEnhancementDialog.tsx'
 import css from './VisionEnhancementRow.module.css'
 
+const DEEPSEEK_NATIVE_VISION_PROVIDER = 'deepseek-official'
+const DEEPSEEK_NATIVE_VISION_MODEL = 'deepseek-v4-flash-vision-exp'
+
 /** Shared registration face for the Settings row and composer shortcut. */
 export interface VisionEnhancementInjected {
   hooks: {
@@ -43,6 +46,8 @@ export type VisionEnhancementShortcutInjected = VisionEnhancementInjected & {
   resolveRoute: (modelProvider: string, model: string) => Promise<VisionRouteView>
   /** Enable automatic routing for the current model. */
   activateRoute: (modelProvider: string, model: string) => Promise<VisionRouteView>
+  /** Select DeepSeek's native multimodal model for this session and future blank sessions. */
+  selectNativeVision: () => Promise<void>
 }
 
 /** Full composer shortcut props. */
@@ -50,7 +55,7 @@ export type VisionEnhancementShortcutProps =
   PropsRuntime<'conversation.input.left'> & InjectFace<VisionEnhancementShortcutInjected>
 
 function routeText(route: VisionRouteView | undefined): string | undefined {
-  if (route?.mode === 'native') return '原生'
+  if (route?.mode === 'native') return '原生视觉'
   if (route?.mode === 'compatible') return `兼容 · ${route.providerName ?? route.provider ?? '视觉服务'}`
   if (route?.mode === 'unavailable') return '当前模型不可用'
   return undefined
@@ -62,7 +67,7 @@ function statusText(state: VisionEnhancementState, route?: VisionRouteView, mode
   if (state.status === 'error') return '状态异常，点击重新配置'
   if (!modelReady) return '正在读取当前模型'
   if (state.enabled) return routeText(route) === undefined ? '已开启，正在匹配路径' : `已开启 · ${routeText(route)}`
-  return '已关闭，点击开启'
+  return '已关闭，点击后切换到支持图片的模型'
 }
 
 function hoverContent(
@@ -72,13 +77,15 @@ function hoverContent(
   modelReady: boolean,
 ): ReactNode {
   const providerName = state.providers.find(provider => provider.id === state.provider)?.name ?? state.provider
-  const routeDescription = route?.mode === 'native'
-    ? `当前模型 ${route.model} 原生接收图片；优先通过 DeepSeek Files API 安全上传并复用，必要时在请求上限内回退为内联图片，不会重复调用兼容视觉服务。`
-    : route?.mode === 'compatible'
-      ? `当前模型不原生接收图片，改由 ${route.providerName ?? route.provider ?? providerName} · ${route.visionModel ?? state.model} 读取。`
-      : route?.mode === 'unavailable'
-        ? '当前模型不原生接收图片，且尚无可用的兼容视觉服务。'
-        : `开启后自动优先使用当前模型的原生视觉；不支持时使用 ${providerName} · ${state.model}。`
+  const routeDescription = !state.enabled
+    ? `点击后，右侧主模型将切换为 ${DEEPSEEK_NATIVE_VISION_MODEL}。`
+    : route?.mode === 'native'
+      ? `当前模型 ${route.model} 原生接收图片；优先通过 DeepSeek Files API 安全上传并复用，必要时在请求上限内回退为内联图片，不会重复调用兼容视觉服务。`
+      : route?.mode === 'compatible'
+        ? `当前模型不原生接收图片，改由 ${route.providerName ?? route.provider ?? providerName} · ${route.visionModel ?? state.model} 读取。`
+        : route?.mode === 'unavailable'
+          ? '当前模型不原生接收图片，且尚无可用的兼容视觉服务。'
+          : `开启后自动优先使用当前模型的原生视觉；不支持时使用 ${providerName} · ${state.model}。`
   return (
     <div className={css.shortcutHover}>
       <div className={css.shortcutHoverTitle}>
@@ -96,7 +103,7 @@ function hoverContent(
 /** Render an always-visible, shared-state visual-enhancement switch in the composer. */
 export function VisionEnhancementShortcut({
   useVisionEnhancement, useVisionModelDirectory, load, loadModelDirectory,
-  disable, enable, resolveRoute, activateRoute,
+  disable, enable, resolveRoute, activateRoute, selectNativeVision,
 }: VisionEnhancementShortcutProps): ReactNode {
   const state = useVisionEnhancement(snapshot => snapshot)
   const currentModel = useVisionModelDirectory(snapshot => snapshot.current)
@@ -104,6 +111,7 @@ export function VisionEnhancementShortcut({
   const [failure, setFailure] = useState<string>()
   const [route, setRoute] = useState<VisionRouteView>()
   const [routeError, setRouteError] = useState<string>()
+  const [activating, setActivating] = useState(false)
 
   useEffect(() => {
     void load()
@@ -129,20 +137,27 @@ export function VisionEnhancementShortcut({
     return () => { current = false }
   }, [currentModel?.model, currentModel?.provider, resolveRoute, state.enabled])
 
-  const busy = state.status === 'idle' || state.status === 'loading' || state.status === 'saving'
+  const busy = state.status === 'idle' || state.status === 'loading' || state.status === 'saving' || activating
   const activate = (): void => {
     setFailure(undefined)
     if (!state.enabled) {
       if (currentModel === null) return
-      void activateRoute(currentModel.provider, currentModel.model).then((value) => {
-        setRoute(value)
-        setRouteError(undefined)
-      }, (error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error)
-        setFailure(message)
-        setRouteError(message)
-        setDialogOpen(true)
-      })
+      const nativeSelected = currentModel.provider === DEEPSEEK_NATIVE_VISION_PROVIDER
+        && currentModel.model === DEEPSEEK_NATIVE_VISION_MODEL
+      setActivating(true)
+      const selection = nativeSelected ? Promise.resolve() : selectNativeVision()
+      void selection
+        .then(() => activateRoute(DEEPSEEK_NATIVE_VISION_PROVIDER, DEEPSEEK_NATIVE_VISION_MODEL))
+        .then((value) => {
+          setRoute(value)
+          setRouteError(undefined)
+        }, (error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error)
+          setFailure(message)
+          setRouteError(message)
+          setDialogOpen(true)
+        })
+        .finally(() => { setActivating(false) })
       return
     }
     void disable().catch((error: unknown) => {
@@ -167,9 +182,6 @@ export function VisionEnhancementShortcut({
           >
             <IconSparkle16 size={14} />
             <span className={css.shortcutLabel}>视觉增强</span>
-            {state.enabled && routeText(route) !== undefined && (
-              <span className={css.shortcutRoute}>{routeText(route)}</span>
-            )}
           </button>
         )}
         content={hoverContent(state, route, routeError, currentModel !== null)}

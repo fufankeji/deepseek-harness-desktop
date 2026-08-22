@@ -46,7 +46,7 @@ Use `pnpm run dev:desktop:web` for deterministic browser acceptance of the same 
 
 ## Packaging
 
-The local packaging command performs the complete repository build, stages the Host's closed production dependency tree, and creates an unpacked application for the current platform. A separate manual build is not required:
+The local packaging command first rebuilds the bundled FF–LLM Wiki application from its source, then performs the complete repository build, stages the Host's closed production dependency tree, and creates an unpacked application for the current platform. Generated application assets stay ignored and are never a source-of-truth input to a clean release checkout. A separate manual build is not required:
 
 ```sh
 pnpm run package:desktop

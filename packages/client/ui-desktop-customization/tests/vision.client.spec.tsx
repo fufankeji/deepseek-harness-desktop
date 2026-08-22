@@ -42,13 +42,14 @@ function shortcutProps(
     useVisionEnhancement: (select: (value: typeof state) => unknown) => select(state),
     useVisionModelDirectory: (select: (value: {
       current: { provider: string; model: string }
-    }) => unknown) => select({ current: { provider: 'deepseek-official', model: 'deepseek-v4-flash' } }),
+    }) => unknown) => select({ current: { provider: 'deepseek-official', model: 'deepseek-v4-flash-vision-exp' } }),
     load: () => Promise.resolve(),
     loadModelDirectory: () => {},
     disable: () => Promise.resolve(),
     enable: () => Promise.resolve('识别结果'),
     resolveRoute: (modelProvider: string, model: string) => Promise.resolve({ mode: 'off', modelProvider, model }),
     activateRoute: () => Promise.reject(new Error('当前模型不支持原生图片，请先配置并验证兼容视觉提供方。')),
+    selectNativeVision: () => Promise.resolve(),
     ...overrides,
   } as never
 }
@@ -141,7 +142,8 @@ describe('Vision enhancement composer shortcut', () => {
     const control = screen.getByRole('switch', { name: /视觉增强：已关闭/ })
     fireEvent.pointerEnter(control)
     await act(async () => { vi.advanceTimersByTime(350) })
-    expect(screen.getByText(/自动优先使用当前模型的原生视觉/)).toBeTruthy()
+    expect(screen.getByText(/deepseek-v4-flash-vision-exp/)).toBeTruthy()
+    expect(control.textContent).toBe('视觉增强')
 
     vi.useRealTimers()
     fireEvent.click(control)
@@ -159,7 +161,7 @@ describe('Vision enhancement composer shortcut', () => {
     const control = screen.getByRole('switch', { name: /已关闭/ })
     fireEvent.click(control)
     await waitFor(() => {
-      expect(activateRoute).toHaveBeenCalledWith('deepseek-official', 'deepseek-v4-flash')
+      expect(activateRoute).toHaveBeenCalledWith('deepseek-official', 'deepseek-v4-flash-vision-exp')
     })
     expect(screen.queryByText('阿里云百炼 · qwen3.8-max')).toBeNull()
 
@@ -168,6 +170,34 @@ describe('Vision enhancement composer shortcut', () => {
     await act(async () => { vi.advanceTimersByTime(350) })
     expect(screen.getByText(/优先通过 DeepSeek Files API 安全上传并复用/)).toBeTruthy()
     expect(screen.getByText(/不会重复调用兼容视觉服务/)).toBeTruthy()
+  })
+
+  it('switches a text-only session to the default native visual model before activation', async () => {
+    const selectNativeVision = vi.fn(() => Promise.resolve())
+    const activateRoute = vi.fn(() => Promise.resolve({
+      mode: 'native' as const,
+      modelProvider: 'deepseek-official',
+      model: 'deepseek-v4-flash-vision-exp',
+    }))
+    const props = shortcutProps(ready(), {
+      useVisionModelDirectory: select => select({
+        current: { provider: 'deepseek-official', model: 'deepseek-v4-pro' },
+        routable: true,
+        groups: [],
+        failures: [],
+        status: 'ready',
+        error: null,
+      }),
+      selectNativeVision,
+      activateRoute,
+    })
+    render(<VisionEnhancementShortcut {...props} />)
+
+    fireEvent.click(screen.getByRole('switch', { name: /已关闭/ }))
+    await waitFor(() => { expect(selectNativeVision).toHaveBeenCalledOnce() })
+    await waitFor(() => {
+      expect(activateRoute).toHaveBeenCalledWith('deepseek-official', 'deepseek-v4-flash-vision-exp')
+    })
   })
 
   it('disables directly when the shared capability is on', async () => {
@@ -195,7 +225,7 @@ describe('Vision enhancement settings', () => {
 
     render(<VisionEnhancementRow {...props} />)
     fireEvent.click(screen.getByRole('switch', { name: '视觉能力增强' }))
-    expect(await screen.findAllByText('阿里云百炼 · qwen3.8-max')).toHaveLength(2)
+    expect(await screen.findAllByText('阿里云百炼 · qwen3.8-max')).toHaveLength(1)
     fireEvent.change(screen.getByLabelText('阿里云百炼 API Key'), { target: { value: 'bailian-test-key' } })
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '验证并开启' }).hasAttribute('disabled')).toBe(false)

@@ -20,7 +20,6 @@
 .shortcut:focus-visible,.shortcutOn:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary); outline-offset:2px; }
 .shortcut:disabled,.shortcutOn:disabled { color:var(--dsw-alias-label-dimmed); cursor:default; }
 .shortcutLabel { overflow:hidden; text-overflow:ellipsis; }
-.shortcutRoute { max-width:130px; overflow:hidden; padding-left:6px; border-left:1px solid color-mix(in srgb,currentColor 24%,transparent); font-size:11px; font-weight:600; text-overflow:ellipsis; }
 .shortcutHover { display:flex; flex-direction:column; gap:8px; color:var(--dsw-static-neutral-bluish-00); }
 .shortcutHoverTitle { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; font-weight:600; line-height:20px; }
 .shortcutHoverStatus,.shortcutHoverOn { flex:0 0 auto; padding:1px 6px; border-radius:999px; color:var(--dsw-static-neutral-bluish-300); background:color-mix(in srgb,var(--dsw-static-neutral-bluish-00) 10%,transparent); font-size:11px; font-weight:500; line-height:16px; }
@@ -60,4 +59,4 @@
 .primary { border:0; color:var(--dsw-alias-label-primary-foreground); background:var(--dsw-alias-button-primary-fill); }
 .secondary { border:1px solid var(--dsw-alias-border-l2); color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-layer-1); }
 .primary:disabled,.secondary:disabled { cursor:default; opacity:.55; }
-@media (max-width:620px) { .fieldGrid { grid-template-columns:1fr; } .testCard { flex-direction:column; } .imageWrap { width:100%; height:180px; } .row { align-items:flex-start; } .shortcutLabel,.shortcutRoute { display:none; } .shortcut,.shortcutOn { width:28px; justify-content:center; padding:0; } }
+@media (max-width:620px) { .fieldGrid { grid-template-columns:1fr; } .testCard { flex-direction:column; } .imageWrap { width:100%; height:180px; } .row { align-items:flex-start; } .shortcutLabel { display:none; } .shortcut,.shortcutOn { width:28px; justify-content:center; padding:0; } }

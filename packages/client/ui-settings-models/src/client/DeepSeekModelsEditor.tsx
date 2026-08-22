@@ -299,82 +299,93 @@ export function DeepSeekModelsEditor(props: DeepSeekModelsEditorProps): ReactNod
         ? <p className={styles['modelEmpty']}>{props.t('modelsEmpty')}</p>
         : (
           <div className={styles['modelList']}>
-            {props.models.map((model, index) => (
-              <div className={styles['modelEntry']} key={index}>
-                <div className={styles['modelRow']}>
-                  <input
-                    className={styles['input']}
-                    type="text"
-                    value={typeof model['id'] === 'string' ? model['id'] : ''}
-                    placeholder={props.t('modelId')}
-                    aria-label={`${props.t('modelId')} ${String(index + 1)}`}
-                    disabled={props.disabled}
-                    onChange={(event) => { update(index, 'id', event.target.value) }}
-                    onBlur={(event) => {
-                      // Settle a pasted id rather than trimming per keystroke,
-                      // which would stop the user typing an interior space.
-                      const trimmed = event.target.value.trim()
-                      if (trimmed !== event.target.value) update(index, 'id', trimmed)
-                    }}
-                  />
-                  <input
-                    className={styles['input']}
-                    type="text"
-                    value={typeof model['name'] === 'string' ? model['name'] : ''}
-                    placeholder={props.t('modelName')}
-                    aria-label={`${props.t('modelName')} ${String(index + 1)}`}
-                    disabled={props.disabled}
-                    onChange={(event) => {
-                      update(index, 'name', event.target.value === '' ? undefined : event.target.value)
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className={styles['iconButton']}
-                    aria-label={`${props.t('modelAdvanced')} ${String(index + 1)}`}
-                    aria-expanded={expanded.has(index)}
-                    title={props.t('modelAdvanced')}
-                    onClick={() => { toggle(index) }}
-                  >
-                    {expanded.has(index) ? <IconChevronDownOutline14 /> : <IconChevronRightOutline14 />}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles['iconButton']} ${styles['iconButtonDanger']}`}
-                    aria-label={`${props.t('removeModel')} ${String(index + 1)}`}
-                    title={props.t('removeModel')}
-                    disabled={props.disabled}
-                    onClick={() => { remove(index) }}
-                  >
-                    <IconTrashOutline16 size={14} />
-                  </button>
+            {props.models.map((model, index) => {
+              const nativeImage = Array.isArray(model['inputModalities'])
+                && model['inputModalities'].includes('image')
+              return (
+                <div className={styles['modelEntry']} key={index}>
+                  <div className={styles['modelRow']}>
+                    <input
+                      className={styles['input']}
+                      type="text"
+                      value={typeof model['id'] === 'string' ? model['id'] : ''}
+                      placeholder={props.t('modelId')}
+                      aria-label={`${props.t('modelId')} ${String(index + 1)}`}
+                      disabled={props.disabled}
+                      onChange={(event) => { update(index, 'id', event.target.value) }}
+                      onBlur={(event) => {
+                        // Settle a pasted id rather than trimming per keystroke,
+                        // which would stop the user typing an interior space.
+                        const trimmed = event.target.value.trim()
+                        if (trimmed !== event.target.value) update(index, 'id', trimmed)
+                      }}
+                    />
+                    <input
+                      className={styles['input']}
+                      type="text"
+                      value={typeof model['name'] === 'string' ? model['name'] : ''}
+                      placeholder={props.t('modelName')}
+                      aria-label={`${props.t('modelName')} ${String(index + 1)}`}
+                      disabled={props.disabled}
+                      onChange={(event) => {
+                        update(index, 'name', event.target.value === '' ? undefined : event.target.value)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles['iconButton']}
+                      aria-label={`${props.t('modelAdvanced')} ${String(index + 1)}`}
+                      aria-expanded={expanded.has(index)}
+                      title={props.t('modelAdvanced')}
+                      onClick={() => { toggle(index) }}
+                    >
+                      {expanded.has(index) ? <IconChevronDownOutline14 /> : <IconChevronRightOutline14 />}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles['iconButton']} ${styles['iconButtonDanger']}`}
+                      aria-label={`${props.t('removeModel')} ${String(index + 1)}`}
+                      title={props.t('removeModel')}
+                      disabled={props.disabled}
+                      onClick={() => { remove(index) }}
+                    >
+                      <IconTrashOutline16 size={14} />
+                    </button>
+                  </div>
+                  {nativeImage
+                    ? (
+                      <div className={styles['modelCapabilityBadges']}>
+                        <span className={styles['imageInputBadge']}>{props.t('imageInputBadge')}</span>
+                      </div>
+                    )
+                    : null}
+                  {expanded.has(index)
+                    ? (
+                      <div className={styles['modelAdvanced']}>
+                        {capacityField(model, index, 'contextWindow', props.defaultContextWindow)}
+                        {capacityField(model, index, 'maxTokens', props.defaultMaxTokens)}
+                        <label className={styles['modelCapability']}>
+                          <input
+                            type="checkbox"
+                            checked={Array.isArray(model['inputModalities'])
+                              && model['inputModalities'].includes('image')}
+                            aria-label={`${props.t('nativeImageInput')} ${String(index + 1)}`}
+                            disabled={props.disabled}
+                            onChange={(event) => {
+                              setNativeImageInput(model, index, event.target.checked)
+                            }}
+                          />
+                          <span className={styles['modelCapabilityCopy']}>
+                            <span className={styles['modelCapabilityTitle']}>{props.t('nativeImageInput')}</span>
+                            <span className={styles['modelCapabilityHint']}>{props.t('nativeImageInputHint')}</span>
+                          </span>
+                        </label>
+                      </div>
+                    )
+                    : null}
                 </div>
-                {expanded.has(index)
-                  ? (
-                    <div className={styles['modelAdvanced']}>
-                      {capacityField(model, index, 'contextWindow', props.defaultContextWindow)}
-                      {capacityField(model, index, 'maxTokens', props.defaultMaxTokens)}
-                      <label className={styles['modelCapability']}>
-                        <input
-                          type="checkbox"
-                          checked={Array.isArray(model['inputModalities'])
-                            && model['inputModalities'].includes('image')}
-                          aria-label={`${props.t('nativeImageInput')} ${String(index + 1)}`}
-                          disabled={props.disabled}
-                          onChange={(event) => {
-                            setNativeImageInput(model, index, event.target.checked)
-                          }}
-                        />
-                        <span className={styles['modelCapabilityCopy']}>
-                          <span className={styles['modelCapabilityTitle']}>{props.t('nativeImageInput')}</span>
-                          <span className={styles['modelCapabilityHint']}>{props.t('nativeImageInputHint')}</span>
-                        </span>
-                      </label>
-                    </div>
-                  )
-                  : null}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       <button

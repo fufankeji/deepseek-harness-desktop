@@ -12,7 +12,7 @@ Status: implemented
 
 ## 决定
 
-`AgentDefaultModelConfig` 提供 `ctx.agentDefaultModel`，并把 `{provider, model, reasoningEffort?}` 注册为 `agent-default-model` Settings 分节。其 `{provider, model}` 组合条目是 base 层，`settings.yaml` 提供用户层。该服务不偏向特定入口，因此直接创建与 ApiProxy 支撑的创建共享同一个默认值（[headless 直接 core 入口](../architecture/2026-08-09-headless-direct-core-entry-point.zh.md)）。
+`AgentDefaultModelConfig` 提供 `ctx.agentDefaultModel`，并把 `{provider, model, reasoningEffort?}` 注册为 `agent-default-model` Settings 分节。Base 组合条目选择文本模型 `deepseek-v4-flash`，`settings.yaml` 提供用户层。该服务不偏向特定入口，因此直接创建与 ApiProxy 支撑的创建共享同一个默认值（[headless 直接 core 入口](../architecture/2026-08-09-headless-direct-core-entry-point.zh.md)）。
 
 `reasoningEffort` 属于 Settings 分节，但不属于插件配置。Settings 层按字段合并，因此已配置的强度会在用户选择省略它时继续存在。`saveSelection()` 写入完整的用户分节；因此，缺少该字段会清除已存强度。部署级强度默认值属于适配器 profile，并由它按模型解析。
 
@@ -27,6 +27,8 @@ Status: implemented
 ## 影响
 
 `host.describe` 报告当前 Agent 默认值。模型切换成功后，`settings.yaml` 中会存有一个 `agent-default-model:` 分节。网关不通过 Settings 页 allowlist 暴露该 namespace；模型选择器是它的编辑器。
+
+Desktop 视觉增强快捷按钮不再重复显示模型名称。如果开启时当前选中纯文本模型，它会先经同一个 `ModelDirectory` 选中 `deepseek-v4-flash-vision-exp`；右侧模型选择器随后成为当前模型名称的可见事实源。Models 设置页把该路由说明为视觉增强模型，并在模型行上只保留一个图片输入标签。这些界面不会新建第二套偏好或凭据：所选路由仍属于 `deepseek-official`，并解析现有 DeepSeek 凭据。
 
 ## 无法发送消息的会话
 

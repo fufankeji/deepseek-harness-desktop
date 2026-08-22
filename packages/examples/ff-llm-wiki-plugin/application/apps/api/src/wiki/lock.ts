@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { CONTENT_ROOT } from './paths.js'
 
@@ -24,6 +24,39 @@ function sleepSync(ms: number): void {
   }
 }
 
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM'
+  }
+}
+
+/** Remove a lock whose recorded owner no longer exists; preserve a live owner's lock. */
+function reclaimStaleLock(): boolean {
+  let owner: string
+  try {
+    owner = readFileSync(LOCK_PATH, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+    throw error
+  }
+  const pid = Number(owner.trim())
+  if (Number.isSafeInteger(pid) && pid > 0 && processIsAlive(pid)) return false
+
+  // Re-read before removal so a just-replaced lock owned by another process is
+  // never deleted based on the stale observation above.
+  try {
+    if (readFileSync(LOCK_PATH, 'utf8') !== owner) return true
+    rmSync(LOCK_PATH, { force: true })
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+    throw error
+  }
+}
+
 export function withWikiLock<T>(fn: () => T): T {
   const deadline = Date.now() + LOCK_TIMEOUT_MS
   for (;;) {
@@ -32,6 +65,7 @@ export function withWikiLock<T>(fn: () => T): T {
       break
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e
+      if (reclaimStaleLock()) continue
       if (Date.now() > deadline) {
         rmSync(LOCK_PATH, { force: true })
         throw new Error(

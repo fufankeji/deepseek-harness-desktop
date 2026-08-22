@@ -49,10 +49,10 @@ export function VisionEnhancementRow({
           <div className={css.titleLine}>
             <span className={css.spark}>视</span>
             <span className={css.title}>视觉能力增强</span>
-            <span className={css.model}>{providerName} · {state.model}</span>
+            <span className={css.model}>兼容视觉 · {providerName} · {state.model}</span>
           </div>
           <div className={css.desc} role={state.error === null ? undefined : 'alert'}>
-            {state.error ?? '让所有 Agent 都能理解截图、照片、图表和图片文字。'}
+            {state.error ?? '会话内的“视觉增强”用于切换官方图文模型；这里配置纯文本模型的兼容视觉备用服务。'}
           </div>
         </div>
         <div className={css.control}>

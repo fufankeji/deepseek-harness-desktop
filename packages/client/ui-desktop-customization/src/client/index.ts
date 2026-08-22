@@ -107,6 +107,10 @@ export function apply(ctx: ClientContext): void {
         },
         resolveRoute: (modelProvider, model) => vision.route(modelProvider, model),
         activateRoute: (modelProvider, model) => vision.activate(modelProvider, model),
+        selectNativeVision: () => directory.select({
+          provider: 'deepseek-official',
+          model: 'deepseek-v4-flash-vision-exp',
+        }),
       }
     },
   }, VisionEnhancementShortcut))

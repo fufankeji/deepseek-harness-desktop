@@ -12,7 +12,9 @@ describe('Desktop vision preset inheritance', () => {
   it('keeps the base host tool set unchanged for all four shipped presets', () => {
     const patch = readFileSync(resolve(ROOT, 'packages/bundle/web-app/cordis.patch.yml'), 'utf8')
     expect(patch).toMatch(/- id: tool-skill\n\s+disabled: true/)
-    expect(patch).toMatch(/- id: attachment-local\n\s+config:\n\s+maxImageBytes: !!js "process\.env\.DSH_DESKTOP === '1' \? 10485760 : undefined"/)
+    expect(patch).toContain(`- id: attachment-local
+  config:
+    maxImageBytes: !!js "process.env.DSH_DESKTOP === '1' ? 10485760 : undefined"`)
     for (const preset of ['standard', 'code', 'minimal', 'cordis']) {
       expect(existsSync(resolve(ROOT, 'apps/cli/config/agent-presets', preset))).toBe(true)
     }

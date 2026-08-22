@@ -124,6 +124,47 @@
   margin-left: auto;
 }
 
+.nativeVisionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.nativeVisionSummary strong {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+.nativeVisionSummaryLabel,
+.nativeVisionSummaryHint {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.nativeVisionSummaryHint {
+  flex-basis: 100%;
+}
+
+.imageInputBadge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.imageInputBadge {
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+}
+
 /* `box-sizing` on every control here: the app has no global border-box reset,
    so without it the outlined variants stand 2px taller than the filled ones
    they sit beside (Cancel next to Apply, Edit next to Delete). */
@@ -465,6 +506,13 @@
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 6px;
+}
+
+.modelCapabilityBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 2px 0;
 }
 
 /* Square, label-free affordances: the row's own inputs carry the meaning, so

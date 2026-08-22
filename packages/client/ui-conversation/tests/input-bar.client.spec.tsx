@@ -336,7 +336,8 @@ describe('image draft rail', () => {
       error: { code: 'attachment-error', message: 'raw wire text', details: { reason } },
     })
     const model = bench({ promptError: attachmentError('MODEL_DOES_NOT_SUPPORT_IMAGES') })
-    expect(model.view.getByRole('alert').textContent).toContain('当前模型不支持图片，请切换支持图片的模型')
+    expect(model.view.getByRole('alert').textContent)
+      .toContain('当前文本模型不支持图片，请先点击“视觉增强”切换图文模型')
     cleanup()
     const unknown = bench({ promptError: attachmentError('ATTACHMENT_NOT_REFERENCED') })
     expect(unknown.view.getByRole('alert').textContent).toContain('图片发送失败（ATTACHMENT_NOT_REFERENCED）')

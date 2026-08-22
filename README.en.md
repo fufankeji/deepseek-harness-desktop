@@ -24,7 +24,7 @@
 
 <p align="center">Automatically discover and surface new ecosystem plugins, with AI recommendations for useful capabilities; search, verify, install, enable, disable, and uninstall without the command line.</p>
 
-<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.14/DeepSeek-Harness-Desktop-0.1.0-rc.14-macos-arm64-preview.zip"><strong>Download the macOS arm64 development preview</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.14/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.14-Setup.exe"><strong>Download the Windows x64 development preview</strong></a></p>
+<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.15/DeepSeek-Harness-Desktop-0.1.0-rc.15-macos-arm64-preview.zip"><strong>Download the macOS arm64 development preview</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.15/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.15-Setup.exe"><strong>Download the Windows x64 development preview</strong></a></p>
 
 <p align="center">
   <img src="assets/plugin-discovery-hero.jpg" alt="DeepSeek Harness Studio vision enhancement, Plugin Store, zero-code activation, automatic plugin delivery, and AI recommendations" width="100%">
@@ -70,7 +70,7 @@ Desktop installers are published only through this repository's GitHub Releases 
 
 ## DeepSeek Harness rc.8 compatibility
 
-Studio `0.1.0-rc.14` integrates the core and Web capabilities from DeepSeek Harness `0.1.0-rc.8` while retaining Beyondata's Plugin Center, Plugin Discovery, Preset Square, Application Center, themes, and desktop recovery flows. Studio and upstream Harness versions are managed independently.
+Studio `0.1.0-rc.15` integrates the core and Web capabilities from DeepSeek Harness `0.1.1-rc.1` while retaining Beyondata's Plugin Center, Plugin Discovery, Preset Square, Application Center, themes, and desktop recovery flows. Studio and upstream Harness versions are managed independently.
 
 - **Models and vision**: supports DeepSeek's `low` reasoning effort, exact-model native image capability declarations, and automatic routing between native and compatible vision behind one switch.
 - **Attachments and references**: supports persistent image attachments, `@` file or session references, and image-bearing `/goal` and `/plan` input.
@@ -154,7 +154,7 @@ When vision enhancement is enabled, the Host selects one route from the current 
 
 > GitHub Releases provides Electron-validated macOS Apple Silicon and Windows x64 development previews. Running either desktop build requires no separate Node.js or pnpm installation. These remain development-preview assets; formal releases will provide platform-signed macOS `.dmg` and Windows x64 `.exe` installers.
 
-<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.14/DeepSeek-Harness-Desktop-0.1.0-rc.14-macos-arm64-preview.zip"><strong>Download the macOS arm64 preview</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.14/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.14-Setup.exe"><strong>Download the Windows x64 installer</strong></a></p>
+<p align="center"><a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.15/DeepSeek-Harness-Desktop-0.1.0-rc.15-macos-arm64-preview.zip"><strong>Download the macOS arm64 preview</strong></a> · <a href="https://github.com/fufankeji/deepseek-harness-studio/releases/download/desktop-preview-v0.1.0-rc.15/DeepSeek-Harness-Desktop-Windows-x64-0.1.0-rc.15-Setup.exe"><strong>Download the Windows x64 installer</strong></a></p>
 
 Development previews use a separate pre-release tag without triggering the formal installer workflow. Their public download area contains only the macOS ZIP and Windows installer; checksums, blockmaps, and platform-verification records remain in the corresponding GitHub Actions artifact so users do not mistake development files for installers. The formal workflow accepts only a `desktop-v*` tag that exactly matches the Desktop version, and publishes the macOS and Windows installers with `SHA256SUMS` only after both platform signatures pass verification.
 
