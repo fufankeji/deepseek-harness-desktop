@@ -81,6 +81,14 @@ describe('SidebarRoot.module.css', () => {
     }
   })
 
+  it('stacks every footer-action occupant above Settings', () => {
+    const actionRules = [...css.matchAll(/\.footerActions\s*\{([^{}]*)\}/g)]
+      .map(([, body = '']) => body.replace(/\s+/g, ' '))
+    expect(actionRules).toContainEqual(expect.stringMatching(
+      /display:\s*flex;.*flex-direction:\s*column;.*gap:\s*2px;/,
+    ))
+  })
+
   it('shares and cancels the wide shell trailing padding structurally', () => {
     const root = declarations('.root')
     expect(root?.get('--dsh-sidebar-inline-padding')).toBe('12px')

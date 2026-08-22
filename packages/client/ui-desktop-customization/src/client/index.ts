@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import { AppearanceController } from './appearance-controller.ts'
 import { AppearanceSection } from './AppearanceSection.tsx'
@@ -35,7 +36,7 @@ const NS = 'desktop.customization'
 /** Services required by the Desktop customization client plugin. */
 export const inject = ['slots', 'locale', 'theme', 'connection', 'remote', 'modelDirectories']
 
-/** Register appearance, updates, and the team attribution overlay. */
+/** Register appearance, updates, and the team attribution sidebar action. */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'desktop-customization: dictionaries')
   const bridge = desktopBridge()
@@ -109,8 +110,8 @@ export function apply(ctx: ClientContext): void {
       }
     },
   }, VisionEnhancementShortcut))
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-    name: 'shell.overlay',
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+    name: 'sidebar.footer.action',
     id: 'beyondata-brand',
     order: 100,
   }, BrandBadge))

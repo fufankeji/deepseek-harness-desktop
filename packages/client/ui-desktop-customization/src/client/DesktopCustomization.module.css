@@ -379,45 +379,56 @@
 }
 
 .brandBadge {
-  position: absolute;
-  right: 22px;
-  bottom: 14px;
-  display: inline-flex;
-  height: 32px;
+  flex: none;
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 11px 0 5px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-border-l2) 82%, transparent);
-  border-radius: 16px;
+  width: calc(100% + 4px);
+  height: 38px;
+  margin: 0 -2px 2px;
+  padding: 0 10px 0 8px;
+  box-sizing: border-box;
+  border-radius: 12px;
   color: var(--dsw-alias-label-secondary);
-  background: color-mix(in srgb, var(--dsw-alias-bg-overlay) 74%, transparent);
-  box-shadow: 0 8px 24px rgba(5, 13, 23, 0.10);
-  backdrop-filter: blur(14px);
-  font-size: 11px;
-  line-height: 16px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 20px;
   text-decoration: none;
-  opacity: 0.76;
-  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+  opacity: 0.68;
+  overflow: hidden;
+  transition: opacity 160ms ease, background 160ms ease;
 }
 
 .brandBadge:hover,
 .brandBadge:focus-visible {
   color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-overlay);
+  background: var(--dsw-alias-interactive-bg-hover);
   opacity: 1;
-  transform: translateY(-1px);
 }
 
 .brandBadge img {
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-@media (max-width: 1080px), (max-height: 700px) {
-  .brandBadge span { display: none; }
-  .brandBadge { width: 30px; padding: 0; justify-content: center; }
+.brandBadge span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brandBadgeRail {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 50%;
 }
 
 @media (max-width: 720px) {

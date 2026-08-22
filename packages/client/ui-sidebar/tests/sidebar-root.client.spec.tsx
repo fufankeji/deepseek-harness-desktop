@@ -58,7 +58,12 @@ function mountShell({ collapsed = false, width = 300, primaryPage = null }: {
         }
         if (key === 'sidebar.footer.action') {
           footerActionOwner = owner
-          return <div data-testid="footer-action-seat" data-wide={owner.wide} />
+          return (
+            <>
+              <div data-testid="footer-action-seat" data-wide={owner.wide} />
+              <div data-testid="footer-action-seat-secondary" data-wide={owner.wide} />
+            </>
+          )
         }
         regionOwner = owner as SidebarSectionOwnerProps
         return <div data-testid="region" data-wide={owner.wide} />
@@ -138,6 +143,13 @@ describe('SidebarRoot shell', () => {
     // Expanded: the request is a no-op (no accidental collapse).
     b.regionOwner().expandSidebar()
     expect(b.toggleSidebar).not.toHaveBeenCalled()
+  })
+
+  it('keeps multiple footer actions in one layout seat', () => {
+    mountShell()
+    const first = screen.getByTestId('footer-action-seat')
+    const second = screen.getByTestId('footer-action-seat-secondary')
+    expect(first.parentElement).toBe(second.parentElement)
   })
 
   it('keeps the region mounted through collapse and expands on its request', () => {

@@ -63,21 +63,21 @@ async function bench() {
       'settings.section': { kind: 'list', scope: 'root' },
       'settings.general.item': { kind: 'list', scope: 'root' },
       'conversation.input.left': { kind: 'list', scope: 'session' },
-      'shell.overlay': { kind: 'list', scope: 'root' },
+      'sidebar.footer.action': { kind: 'list', scope: 'root' },
     },
   } as never, () => null)
   return { ctx, slots, overrideTokens, disposeTokens }
 }
 
 describe('Desktop customization client plugin', () => {
-  it('registers both settings sections, the shared vision controls, and the frame-wide brand badge', async () => {
+  it('registers both settings sections, the shared vision controls, and the sidebar brand action', async () => {
     const b = await bench()
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     const sections = b.slots.entries('settings.section')
     expect(sections.map(entry => entry.component)).toEqual([AppearanceSection, UpdateSection])
     expect(sections.map(entry => resolveSlotLabel(entry.options.label))).toEqual(['背景', '软件更新'])
-    expect(b.slots.entries('shell.overlay')[0]?.component).toBe(BrandBadge)
+    expect(b.slots.entries('sidebar.footer.action')[0]?.component).toBe(BrandBadge)
     expect(b.slots.entries('settings.general.item')[0]?.component).toBe(VisionEnhancementRow)
     const shortcut = b.slots.entries('conversation.input.left')[0]
     expect(shortcut?.component).toBe(VisionEnhancementShortcut)
@@ -89,7 +89,7 @@ describe('Desktop customization client plugin', () => {
     expect(b.overrideTokens).toHaveBeenCalledOnce()
     await fiber.dispose()
     expect(b.slots.entries('settings.section')).toHaveLength(0)
-    expect(b.slots.entries('shell.overlay')).toHaveLength(0)
+    expect(b.slots.entries('sidebar.footer.action')).toHaveLength(0)
     expect(b.slots.entries('settings.general.item')).toHaveLength(0)
     expect(b.slots.entries('conversation.input.left')).toHaveLength(0)
     expect(document.body.hasAttribute('data-dsh-desktop-skin')).toBe(false)

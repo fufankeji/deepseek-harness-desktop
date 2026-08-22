@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Desktop-only browser plugin for learner-facing visual enhancement, background selection, the visible update center, and the Beyondata attribution badge. The package is mounted only when the Desktop Host exports `DSH_DESKTOP=1`; persistence and update operations cross the fixed Electron preload bridge. The update card labels the Studio shell version and embedded Harness core version separately.
+Desktop-only browser plugin for learner-facing visual enhancement, background selection, the visible update center, and the Beyondata attribution entry. The package is mounted only when the Desktop Host exports `DSH_DESKTOP=1`; persistence and update operations cross the fixed Electron preload bridge. The attribution entry occupies the sidebar footer action seat above Settings, keeps its text in the wide column, and contracts to a tooltip-backed logo in the rail so it never overlays conversation controls. The update card labels the Studio shell version and embedded Harness core version separately.
 
 The package ships five named background themes plus the image-free original UI: Whale Maid is the first-run default, while Cloud Cat, Jiutian Deep-Space Compute Observatory, Jiutian Quantum Glass Laboratory, and Jiutian Dawn Compute Horizon remain selectable. Their stable identifiers are persisted without duplicating bundled images in `userData`. The custom-background path still accepts PNG, JPEG, or WebP up to 16 MB, renders a 1920×1080 WebP locally, persists it under Electron `userData`, and applies ThemeRuntime token overrides. No selected image is uploaded.
 

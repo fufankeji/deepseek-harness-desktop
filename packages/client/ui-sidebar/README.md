@@ -10,13 +10,13 @@ On macOS, an Electron document exposes a sidebar-top drag strip and meets the si
 
 New Session starts the runtime's page-local frontend Session Intent. The runtime targets the explicit Workspace used by a scoped action, otherwise the current Session's Workspace, otherwise the most recently active Workspace; when none exists it clears into the blank New Session page. Workspace-specific controls and the shared picker belong to ui-workspace.
 
-`SidebarRootComponentProps` composes the layout owner share (including current `primaryPage`), the global `useSessions` and `useWorkspaces` hooks, the declared brand, `sidebar.primary.action`, `sidebar.workspaces`, and `sidebar.settings` child slots, and injected `startSession` plus sidebar-toggle callbacks. There is no plugin store.
+`SidebarRootComponentProps` composes the layout owner share (including current `primaryPage`), the global `useSessions` and `useWorkspaces` hooks, the declared brand, `sidebar.primary.action`, `sidebar.workspaces`, `sidebar.footer.action`, and `sidebar.settings` child slots, and injected `startSession` plus sidebar-toggle callbacks. There is no plugin store.
 
 During a live collapse, the shell holds the expanded content at its current width while it fades out for 150ms. The four upper controls—the shell toggle and New Session plus add and search rendered through `sidebar.workspaces`—then share one 150ms fade and leftward translation, ending with the layout's 300ms column slide; this is 49px for the 56px rail and 66px for the macOS 90px rail. Every 36px control box follows the same path to its centered rail position: a 10px inline inset in the 56px rail and 27px in the macOS rail. The bottom-pinned `sidebar.settings` control shares the fade timing but has no horizontal translation. A page that starts collapsed renders the rail statically, and reduced-motion mode disables both transitions.
 
 Scrollbars in the column are a pointer affordance: the shell rebinds ui-theme's [scrollbar indirection](../ui-theme/README.md) to `transparent` whenever the pointer is outside it, and keeps the thumb drawn for 2s after the pointer leaves, so a list nobody is pointing at carries no bar. The reservation that keeps rows from moving belongs to the scrolling region ([ui-workspace](../ui-workspace/README.md)), so revealing a thumb never reflows.
 
-The foot is the `sidebar.settings` seat: the sidebar renders only the bottom-pinned layout slot and shares its column state (`wide`); ui-settings registers the trigger row and settings panel there.
+The foot stacks every `sidebar.footer.action` occupant above the bottom-pinned `sidebar.settings` seat in both sidebar widths. Each occupant receives only the column state (`wide`) and owns its row or rail-button geometry; ui-settings registers the Settings trigger row and panel in the final seat.
 
 The `/client` exports are the plugin body (`apply`/`inject`) plus the contract types only; SidebarRoot, the row components, and the tree derivation remain package-internal behind the slot registration.
 

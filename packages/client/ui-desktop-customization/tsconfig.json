@@ -14,6 +14,7 @@
     { "path": "../ui-slots" },
     { "path": "../ui-theme" },
     { "path": "../ui-settings" },
+    { "path": "../ui-sidebar" },
     { "path": "../ui-layout" },
     { "path": "../ui-model-selection" },
     { "path": "../ui-conversation" },
